@@ -59,17 +59,16 @@ class Line(object):
         midpoint = Point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2)
         inf = False
 
+        slope = 0
         if num == 0:  # We have a horizontal line becoming vertical.
-            slope = 0
             inf = True
         elif denom == 0:  # We have a vertical line becoming horizontal.
-            slope = 0
+            pass
         else:
             slope = num / denom
             slope = -(1 / slope)
 
         b = -((slope * midpoint.x) - midpoint.y)
-
         l = Line(slope, b, inf)
         return l
 
@@ -83,8 +82,6 @@ class Line(object):
 
 
 class Circle(object):
-    # (x - h)^2 + (y - k)^2 = r^2
-
     def __init__(self, center, radius):
         self.center = center
         self.radius = Decimal(radius)
@@ -102,8 +99,7 @@ class Circle(object):
 
     @staticmethod
     def make_from_three_points(p1, p2, p3):
-        # The bisector of a facet formed by two points will cross the center.
-
+        # Bisect the circle's facet line segments
         l1 = Line.make_bisect_from_two_points(p1, p2)
         l2 = Line.make_bisect_from_two_points(p2, p3)
 
@@ -168,32 +164,20 @@ class CircleSplitter(object):
     def calculate(self):
         unique_trios = list(combinations(self.points, 3))
         for (t1, t2, t3) in unique_trios:
-            #print('Testing {} {} {}'.format(t1, t2, t3))
             try:
                 c = Circle.make_from_three_points(t1, t2, t3)
             except LinesDoNotIntersect as e:
                 continue
-
             if self.invalid_solution(c):
                 continue
-
-            encircled_points = 0
-            for p in self.points:
-                if c.contains_point(p):
-                    encircled_points += 1
-
             if self.valid_solution(c):
                 self.add_solution(c)
 
         unique_duos = list(combinations(self.points, 2))
         for (t1, t2) in unique_duos:
-            #print('Testing {} {}'.format(t1, t2))
-
             c = Circle.make_from_two_points(t1, t2)
-
             if self.invalid_solution(c):
                 continue
-
             if self.valid_solution(c):
                 self.add_solution(c)
 
