@@ -47,13 +47,9 @@ for filename in test_input:
     total = time.time() - start
 
     if solutions:
-        print('solution(s):')
+        print('solution:')
         for circle in solutions:
-            print('\t({}, {}) r{}'.format(
-                round(circle.x, 8),
-                round(circle.y, 8),
-                round(circle.radius, 8))
-            )
+            print('\t{}'.format(circle))
     else:
         print('No solutions found.')
 

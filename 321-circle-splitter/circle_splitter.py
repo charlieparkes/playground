@@ -28,7 +28,10 @@ class Point(object):
         self.y = Decimal(y)
 
     def __repr__(self):
-        return u'({},{})'.format(self.x, self.y)
+        return u'({},{})'.format(
+            round(self.x, 8),
+            round(self.y, 8)
+        )
 
 
 class Line(object):
@@ -95,7 +98,10 @@ class Circle(object):
         return self.center.y
 
     def __repr__(self):
-        return u'{} R={}'.format(self.center, self.radius)
+        return u'center {}, radius {}'.format(
+            self.center,
+            round(self.radius, 8)
+        )
 
     @staticmethod
     def make_from_three_points(p1, p2, p3):
