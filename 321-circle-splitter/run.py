@@ -32,7 +32,6 @@ for filename in test_input:
             if len(l) is 2:
                 x = Decimal(l[0])
                 y = Decimal(l[1])
-
                 p = Point(x, y)
 
                 if x < 0 or x > 1 or y < 0 or y > 1:
