@@ -14,6 +14,7 @@ of the points in the square lie within the circle?
 """
 
 import os
+import time
 from decimal import *
 from itertools import combinations
 
@@ -25,7 +26,7 @@ test_input = os.listdir('test_input')
 for filename in test_input:
     points = []
     with open('test_input/'+filename, 'r') as f:
-        print('Test {}'.format(filename))
+        print('Test {} '.format(filename), end='')
         for line in f:
             l = line.split(' ')
             if len(l) is 2:
@@ -39,15 +40,22 @@ for filename in test_input:
                     continue
 
                 points.append(p)
-                #print(p)
 
+    start = time.time()
     cs = CircleSplitter(points)
     solutions = cs.calculate()
+    total = time.time() - start
 
     if solutions:
-        print('Solution(s):')
+        print('solution(s):')
         for circle in solutions:
-            print('\t({}, {}) r{}'.format(circle.x, circle.y, circle.radius))
+            print('\t({}, {}) r{}'.format(
+                round(circle.x, 8),
+                round(circle.y, 8),
+                round(circle.radius, 8))
+            )
     else:
-        print('No solutions found.', end='\n\n')
+        print('No solutions found.')
+
+    print('\tRan in {}'.format(round(total, 4)), end='\n\n')
 
