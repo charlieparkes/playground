@@ -56,7 +56,7 @@ class Line(object):
         return Point(x, y)
 
     @staticmethod
-    def make_bisect_from_two_points(p1, p2):
+    def bisect(p1, p2):
         num = (p2.y - p1.y)
         denom = (p2.x - p1.x)
         midpoint = Point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2)
@@ -105,9 +105,8 @@ class Circle(object):
 
     @staticmethod
     def make_from_three_points(p1, p2, p3):
-        # Bisect the circle's facet line segments
-        l1 = Line.make_bisect_from_two_points(p1, p2)
-        l2 = Line.make_bisect_from_two_points(p2, p3)
+        l1 = Line.bisect(p1, p2)
+        l2 = Line.bisect(p2, p3)
 
         center = l1.intersects_at(l2)
         radius = sqrt(pow(p2.x - center.x, 2) + pow(p2.y - center.y, 2))
@@ -129,7 +128,6 @@ class Circle(object):
 
 
 class CircleSplitter(object):
-    target_number = 0
     solution_set = []
 
     def __init__(self, points):
@@ -161,7 +159,7 @@ class CircleSplitter(object):
                 encircled_points += 1
         return encircled_points == self.target_number
 
-    def add_solution(self, c):
+    def store_solution(self, c):
         if self.solution and c.radius == self.solution.radius:
             self.solution_set.append(c)
         else:
@@ -177,7 +175,7 @@ class CircleSplitter(object):
             if self.invalid_solution(c):
                 continue
             if self.valid_solution(c):
-                self.add_solution(c)
+                self.store_solution(c)
 
         unique_duos = list(combinations(self.points, 2))
         for (t1, t2) in unique_duos:
@@ -185,7 +183,7 @@ class CircleSplitter(object):
             if self.invalid_solution(c):
                 continue
             if self.valid_solution(c):
-                self.add_solution(c)
+                self.store_solution(c)
 
         return self.solution_set
 
