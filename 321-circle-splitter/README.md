@@ -14,4 +14,4 @@ of the points in the square lie within the circle?
 ## Solution
 I take every unique combination of three and two points to find valid circles and check if they contain half the points. If a circle is out of bounds or has a radius larger than the best solution found so far, we don't bother checking it.
 
-Output checker: https://jsfiddle.net/gjkdc8hL/
+Generate input and check output: https://jsfiddle.net/gjkdc8hL/
