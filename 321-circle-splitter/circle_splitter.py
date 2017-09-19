@@ -33,6 +33,9 @@ class Point(object):
             round(self.y, 8)
         )
 
+    def distance_from(self, p):
+        return Decimal(sqrt(pow(self.x - p.x, 2) + pow(self.y - p.y, 2)))
+
 
 class Line(object):
     def __init__(self, m, b, inf=False):
@@ -107,22 +110,18 @@ class Circle(object):
     def make_from_three_points(p1, p2, p3):
         l1 = Line.bisect(p1, p2)
         l2 = Line.bisect(p2, p3)
-
         center = l1.intersects_at(l2)
-        radius = sqrt(pow(p2.x - center.x, 2) + pow(p2.y - center.y, 2))
+        radius = p1.distance_from(center)
         return Circle(center, radius)
 
     @staticmethod
     def make_from_two_points(p1, p2):
         center = Point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2)
-        radius = sqrt(pow(p2.x - center.x, 2) + pow(p2.y - center.y, 2))
+        radius = p1.distance_from(center)
         return Circle(center, radius)
 
-    def distance_from_center(self, p):
-        return sqrt(pow(p.x - self.x, 2) + pow(p.y - self.y, 2))
-
     def contains_point(self, p):
-        if self.distance_from_center(p) <= self.radius:
+        if p.distance_from(self.center) <= self.radius:
             return True
         return False
 
