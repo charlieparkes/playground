@@ -87,6 +87,7 @@ shell:
 .PHONY: shell
 
 quickstart: env
-	awsauth --profile=dev
+	awsauth --profile=everest-dev
 	aws sts get-caller-identity
+	echo "You're good to go!"
 .PHONY: quickstart
