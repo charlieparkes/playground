@@ -85,3 +85,8 @@ clean-venv: ## remove development virtualenv
 shell:
 	$(WITH_PIPENV) python
 .PHONY: shell
+
+quickstart: env
+	awsauth --profile=dev
+	aws sts get-caller-identity
+.PHONY: quickstart
