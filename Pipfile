@@ -12,7 +12,5 @@ name = "devpi"
 python_version = "3.6"
 
 [packages]
-
-
-[dev-packages]
-aws-sso = "*"
+awscli = "*"
+aws-sso = {version = "*", index="devpi"}

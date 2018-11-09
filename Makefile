@@ -63,6 +63,12 @@ $(VIRTUALENV)/bin/activate: Pipfile.lock
 env: $(VIRTUALENV) ## create virtualenv
 .PHONY: env
 
+.env:
+	@read -p "setting x: " SETTING_X; \
+	echo "# Port for dev site. Must end in a colon (:)." >> .env; \
+	echo "SETTING_X=$$SETTING_X:" >> .env;
+	echo "FOOBAR=FOOBAR" >> .env
+
 clean: clean-venv clean-pyc
 .PHONY: clean
 
@@ -75,3 +81,7 @@ clean-pyc: ## remove Python file artifacts
 
 clean-venv: ## remove development virtualenv
 	rm -rf $(VIRTUALENV)
+
+shell:
+	$(WITH_PIPENV) python
+.PHONY: shell
