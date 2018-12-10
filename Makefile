@@ -54,6 +54,7 @@ help:
 	@echo "Commands:"
 	@echo ""
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+.PHONY: help
 
 $(VIRTUALENV): $(VIRTUALENV)/bin/activate
 $(VIRTUALENV)/bin/activate: Pipfile.lock
@@ -61,6 +62,7 @@ $(VIRTUALENV)/bin/activate: Pipfile.lock
 	if [ "$(VENV_WORKDIR)" = "." ]; then touch $(VIRTUALENV)/bin/activate; fi
 
 env: $(VIRTUALENV) ## create virtualenv
+	#if [ ! -f "activate" ]; then ln -s .venv/bin/activate activate; fi
 .PHONY: env
 
 .env:
@@ -68,6 +70,7 @@ env: $(VIRTUALENV) ## create virtualenv
 	echo "# Port for dev site. Must end in a colon (:)." >> .env; \
 	echo "SETTING_X=$$SETTING_X:" >> .env;
 	echo "FOOBAR=FOOBAR" >> .env
+.PHONY: .env
 
 clean: clean-venv clean-pyc
 .PHONY: clean
@@ -78,16 +81,26 @@ clean-pyc: ## remove Python file artifacts
 	find . -name '*~' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -fr {} +
 	find . -name '*.egg-info' -exec rm -fr {} +
+.PHONY: clean-pyc
 
 clean-venv: ## remove development virtualenv
 	rm -rf $(VIRTUALENV)
+.PHONY: clean-venv
 
 shell:
 	$(WITH_PIPENV) python
 .PHONY: shell
 
-quickstart: env
-	awsauth --profile=everest-dev
-	aws sts get-caller-identity
-	echo "You're good to go!"
-.PHONY: quickstart
+#ENV ?= dev
+#AWS_AUTH := $(WITH_PIPENV) awsauth --profile=everest-$(ENV)
+#FOO := $(AWS_AUTH); aws sts get-caller-identity
+
+credentials: env
+	#$(AWS_AUTH)
+.PHONY: credentials
+
+auth: env
+	#$(WITH_PIPENV) ./auth.sh dev
+	#$(WITH_PIPENV) aws sts get-caller-identity
+	#@echo "\n You're good to go!"
+.PHONY: check
