@@ -30,20 +30,11 @@
         },
         "awscli": {
             "hashes": [
-<<<<<<< HEAD
-                "sha256:27e45a00e642d4ea729635d8807d6b1a4c12024b6cde40c7661c0721e43d5043",
-                "sha256:7e9f93cfebe35c52d13a0d4f648e7f91dae6cc6afb5aa8d0fb3c4be8d99ea210",
-                "sha256:bf172b635e3c05671e9c04f30bab889fde9dc90761ab790df1d02c51373fd1d7"
-            ],
-            "index": "pypi",
-            "version": "==1.16.79"
-=======
                 "sha256:eb5dc2f92683a8a8fba6f731de511be6c7e2c434ce4837f91dddebd749096227",
                 "sha256:edadde6cd840d037d9a5fce92b8419a4aa6130027eb3724ed4686278c4b47f71"
             ],
             "index": "pypi",
             "version": "==1.16.85"
->>>>>>> Add requests and lock.
         },
         "beautifulsoup4": {
             "extras": [
@@ -58,19 +49,6 @@
         },
         "boto3": {
             "hashes": [
-<<<<<<< HEAD
-                "sha256:c519974b6e9409b170fd2a47d548f43f0c9d5d8979a44c06c31314214143b74e",
-                "sha256:dc7e329cbff455725b43fe7abd0eaef85d1cb7daabcd15a07500587d307b82e0"
-            ],
-            "version": "==1.9.69"
-        },
-        "botocore": {
-            "hashes": [
-                "sha256:6fa72f5f37a16f0240362d05e15c5181f130b4e0408126863a4d099d0edd0b59",
-                "sha256:9c327bcbb00a87129f0d5e74835516621270b42c085275c4f6954605b62ee835"
-            ],
-            "version": "==1.12.69"
-=======
                 "sha256:8cb94f08158f5fb5f28fa4e94be9ab5cd03e63a4056b220c65edc39a13e6c5ad",
                 "sha256:e3f01b76a6ed8abf7e1cce631933268bb1cef82b4e1677dbb1c8d97aae759150"
             ],
@@ -96,7 +74,6 @@
                 "sha256:fc323ffcaeaed0e0a02bf4d117757b98aed530d9ed4531e3e15460124c106691"
             ],
             "version": "==3.0.4"
->>>>>>> Add requests and lock.
         },
         "click": {
             "hashes": [
@@ -181,17 +158,10 @@
         },
         "maya": {
             "hashes": [
-<<<<<<< HEAD
-                "sha256:37ee82c48704db941313bcb74defcbb3394578787475072821b789751b683eeb",
-                "sha256:7ab729715a2ebb66dcd21d946ad486133bee90441bf1db32885c775fd4570688"
-            ],
-            "version": "==0.6.0"
-=======
                 "sha256:7f53e06d5a123613dce7c270cbc647643a6942590dba7a19ec36194d0338c3f4",
                 "sha256:fa90d8c6c9a730a7f740dec6e1c7d3da8ca10159e40bb843e4e72772f5e3a9a3"
             ],
             "version": "==0.6.1"
->>>>>>> Add requests and lock.
         },
         "mock": {
             "hashes": [
