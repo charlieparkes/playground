@@ -16,3 +16,4 @@ awscli = "*"
 aws-sso = {version = "*", index="devpi"}
 #everest-devops = {version = "*", index="devpi"}
 lxml = "*"
+requests = "*"
