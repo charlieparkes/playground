@@ -14,6 +14,8 @@ python_version = "3.6"
 [packages]
 awscli = "*"
 aws-sso = {version = "*", index="devpi"}
+devpi-client = "*"
+elasticsearch-dsl = "*"
 #everest-devops = {version = "*", index="devpi"}
 lxml = "*"
 requests = "*"
