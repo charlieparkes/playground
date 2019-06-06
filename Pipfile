@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [[source]]
-url = "https://readonly:readonly@devpi.int.everest-shared.aws.mintel.com/everest/prod/+simple/"
+url = "https://devpi-backup.int.everest-shared.aws.mintel.com/simple"
 verify_ssl = true
 name = "devpi"
 
@@ -16,6 +16,8 @@ awscli = "*"
 aws-sso = {version = "*", index="devpi"}
 devpi-client = "*"
 elasticsearch-dsl = "*"
+everest-elasticsearch-dsl = {version="*", index="devpi"}
 #everest-devops = {version = "*", index="devpi"}
 lxml = "*"
+python-dateutil = "*"
 requests = "*"
