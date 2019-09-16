@@ -14,10 +14,13 @@ python_version = "3.6"
 [packages]
 awscli = "*"
 aws-sso = {version = "*", index="devpi"}
+backoff = "*"
 devpi-client = "*"
 elasticsearch-dsl = "*"
 everest-elasticsearch-dsl = {version="*", index="devpi"}
 #everest-devops = {version = "*", index="devpi"}
+lpipe = "*"
 lxml = "*"
 python-dateutil = "*"
 requests = "*"
+tqdm = "*"
