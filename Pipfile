@@ -18,7 +18,6 @@ backoff = "*"
 devpi-client = "*"
 elasticsearch-dsl = "*"
 everest-elasticsearch-dsl = {version="*", index="devpi"}
-#everest-devops = {version = "*", index="devpi"}
 lpipe = "*"
 lxml = "*"
 python-dateutil = "*"
