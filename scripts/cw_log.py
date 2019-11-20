@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 client = boto3.client("logs", region_name="us-east-2")
 now = datetime.now(tz=timezone.utc)
 log_group_name = "/aws/ec2/jenkins"
-log_stream_name = f"releases_{now.date().isoformat()}"
+log_stream_name = now.date().isoformat()
 timestamp = int(now.timestamp() * 1000)
 
 
