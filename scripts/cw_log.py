@@ -24,17 +24,6 @@ def _create(_callable, *args, **kwargs):
             raise
 
 
-def _put(event, sequence_token):
-    kwargs = {
-        "logGroupName": log_group_name,
-        "logStreamName": log_stream_name,
-        "logEvents": [event],
-    }
-    if sequence_token:
-        kwargs["sequenceToken"] = sequence_token
-    client.put_log_events(**kwargs)
-
-
 _create(client.create_log_group, logGroupName=log_group_name)
 _create(client.put_retention_policy, logGroupName=log_group_name, retentionInDays=30)
 _create(client.create_log_stream, logGroupName=log_group_name, logStreamName=log_stream_name)
@@ -53,7 +42,14 @@ sequence_token = None
 
 for retry in range(5):
     try:
-        _put(payload, sequence_token)
+        kwargs = {
+            "logGroupName": log_group_name,
+            "logStreamName": log_stream_name,
+            "logEvents": [payload],
+        }
+        if sequence_token:
+            kwargs["sequenceToken"] = sequence_token
+        client.put_log_events(**kwargs)
         print(f"{log_group_name}:{log_stream_name} {payload}")
         break
     except ClientError as e:
