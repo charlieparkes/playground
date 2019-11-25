@@ -102,7 +102,7 @@ class MyClass2 {
       m.putAll(kwargs)
       m.each { k, v -> this."${k}" = v }
       def missing = []
-      def isSet = { a -> if(this."${a}") return true else return false }
+      def isSet = { a -> (this."${a}") ? true : false }
       def isSetExclusive = { args ->
         def found = false
         for (arg in args) {
