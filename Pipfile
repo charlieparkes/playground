@@ -16,10 +16,11 @@ awscli = "*"
 aws-sso = {version = "*", index="devpi"}
 backoff = "*"
 devpi-client = "*"
-elasticsearch-dsl = "*"
+elasticsearch-dsl = "==6.3.1"
 everest-elasticsearch-dsl = {version="*", index="devpi"}
 lpipe = "*"
 lxml = "*"
 python-dateutil = "*"
 requests = "*"
+six = "*"
 tqdm = "*"
