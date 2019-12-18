@@ -154,7 +154,8 @@ class Service:
         return services
 
 
-def calculate_pressure(queue: Queue, service: Service, target_task_pressure: int):
+def estimate_pressure(queue: Queue, service: Service, target_task_pressure: int):
+    """Are there enough tasks for the number of messages we have?"""
     if int(queue.num_msgs) > 0 and int(service.desired_count) == 0:
         return 200
     try:
@@ -163,7 +164,8 @@ def calculate_pressure(queue: Queue, service: Service, target_task_pressure: int
         return 0
 
 
-def calculate_load(queue: Queue):
+def estimate_load(queue: Queue):
+    """Are we processing messages faster or slower than they're arriving?"""
     try:
         return (queue.num_sent / queue.num_received) * 100
     except ZeroDivisionError:
@@ -175,8 +177,8 @@ service = Service.load([service_name])[service_name]
 
 target_pressure = 5000
 print(f"{service_name} {queue_name}")
-print(f"Pressure (approx_num_msgs({queue.num_msgs}) / desired_count({service.desired_count})) / target_pressure({target_pressure} * 100 -> {calculate_pressure(queue, service, target_pressure)}")
-print(f"MessageProcessingRatio num_sent({queue.num_sent}) / num_received({queue.num_received}) -> {calculate_load(queue)}")
+print(f"Pressure (approx_num_msgs({queue.num_msgs}) / desired_count({service.desired_count})) / target_pressure({target_pressure} * 100 -> {estimate_pressure(queue, service, target_pressure)}")
+print(f"MessageProcessingRatio num_sent({queue.num_sent}) / num_received({queue.num_received}) -> {estimate_load(queue)}")
 
 # p = calculate_pressure(queue, service, target_task_pressure)
 # print(f"Pressure: {p}")
