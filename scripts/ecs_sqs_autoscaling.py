@@ -177,7 +177,7 @@ service = Service.load([service_name])[service_name]
 
 target_pressure = 5000
 print(f"{service_name} {queue_name}")
-print(f"Pressure (approx_num_msgs({queue.num_msgs}) / desired_count({service.desired_count})) / target_pressure({target_pressure} * 100 -> {estimate_pressure(queue, service, target_pressure)}")
+print(f"Pressure (approx_num_msgs({queue.num_msgs}) / desired_count({service.desired_count})) / target_pressure({target_pressure}) * 100 -> {estimate_pressure(queue, service, target_pressure)}")
 print(f"MessageProcessingRatio num_sent({queue.num_sent}) / num_received({queue.num_received}) -> {estimate_load(queue)}")
 
 # p = calculate_pressure(queue, service, target_task_pressure)
