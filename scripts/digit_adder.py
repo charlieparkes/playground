@@ -7,11 +7,19 @@ def digit_adder(x):
     return result if not negative else int(f"-{result}")
 
 def digit_adder_no_strings(x):
-    exp = 0
-    reduc = x
-    while reduc > 0:
-        x += 1
-        reduc = reduc/10
+    nums = []
+    reduc = abs(x)
+    while reduc >= 0:
+        nums.append((reduc%10) + 1)
+        reduc = reduc // 10
+        if reduc == 0:
+            break
+    nums.reverse()
+    new_x = 0
+    for n in nums:
+        new_x *= (10 if n < 10 else 100)
+        new_x += n
+    return new_x if not (x < 0) else -1 * new_x
 
 tests = (
     (0, 1),
@@ -22,12 +30,16 @@ tests = (
     (-9, -10),
 )
 
+print("Testing digit_adder")
+print("-------------------")
 for t in tests:
     r = digit_adder(t[0])
     print(f"{t} -> {r}")
     assert r == t[1]
 
-# for t in tests:
-#     r = digit_adder_no_strings(t[0])
-#     print(f"{t} -> {r}")
-#     assert r == t[1]
+print("\n\nTesting digit_adder_no_strings")
+print("------------------------------")
+for t in tests:
+    r = digit_adder_no_strings(t[0])
+    print(f"{t} -> {r}")
+    assert r == t[1]
