@@ -14,9 +14,8 @@ def digit_adder_no_str(x):
         reduc = reduc // 10
         if reduc == 0:
             break
-    nums.reverse()
     new_x = 0
-    for n in nums:
+    for n in nums[::-1]:
         new_x *= (10 if n < 10 else 100)
         new_x += n
     return new_x if not (x < 0) else -1 * new_x
