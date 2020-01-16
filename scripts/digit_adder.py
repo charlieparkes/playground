@@ -6,7 +6,7 @@ def digit_adder(x):
     result = int(''.join(converted))
     return result if not negative else int(f"-{result}")
 
-def digit_adder_no_strings(x):
+def digit_adder_no_str(x):
     nums = []
     reduc = abs(x)
     while reduc >= 0:
@@ -37,9 +37,9 @@ for t in tests:
     print(f"{t} -> {r}")
     assert r == t[1]
 
-print("\n\nTesting digit_adder_no_strings")
-print("------------------------------")
+print("\n\nTesting digit_adder_no_str")
+print("--------------------------")
 for t in tests:
-    r = digit_adder_no_strings(t[0])
+    r = digit_adder_no_str(t[0])
     print(f"{t} -> {r}")
     assert r == t[1]
