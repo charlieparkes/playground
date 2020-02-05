@@ -26,17 +26,21 @@ def _create(_callable, *args, **kwargs):
 
 _create(client.create_log_group, logGroupName=log_group_name)
 _create(client.put_retention_policy, logGroupName=log_group_name, retentionInDays=30)
-_create(client.create_log_stream, logGroupName=log_group_name, logStreamName=log_stream_name)
+_create(
+    client.create_log_stream, logGroupName=log_group_name, logStreamName=log_stream_name
+)
 
 payload = {
     "timestamp": timestamp,
-    "message": json.dumps({
-        "user": "{COMITTER_EMAIL}",  # last comitter to a branch
-        "target": "{ARTIFACT_NAME}",
-        "stage": "publish",
-        "tags": ["{GIT_HASH}", "latest"],
-        "environment": "qa",
-    })
+    "message": json.dumps(
+        {
+            "user": "{COMITTER_EMAIL}",  # last comitter to a branch
+            "target": "{ARTIFACT_NAME}",
+            "stage": "publish",
+            "tags": ["{GIT_HASH}", "latest"],
+            "environment": "qa",
+        }
+    ),
 }
 sequence_token = None
 
@@ -53,7 +57,10 @@ for retry in range(5):
         print(f"{log_group_name}:{log_stream_name} {payload}")
         break
     except ClientError as e:
-        if e.response.get("Error", {}).get("Code") in ("DataAlreadyAcceptedException", "InvalidSequenceTokenException"):
+        if e.response.get("Error", {}).get("Code") in (
+            "DataAlreadyAcceptedException",
+            "InvalidSequenceTokenException",
+        ):
             sequence_token = e.response["Error"]["Message"].rsplit(" ", 1)[-1]
         else:
             raise Exception("Failed to deliver log.") from e

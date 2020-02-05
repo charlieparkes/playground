@@ -42,24 +42,26 @@ print(results)
 print(len(results))
 
 
-
 # ######################
 
 
 # setup
 from aws_sso import boto3_client
 from lpipe import sqs
-client = boto3_client('sqs', region_name='us-east-2')
-queue_urls = client.list_queues(QueueNamePrefix="lam-shepherd")['QueueUrls']
+
+client = boto3_client("sqs", region_name="us-east-2")
+queue_urls = client.list_queues(QueueNamePrefix="lam-shepherd")["QueueUrls"]
 queue_url = [q for q in queue_urls if "dlq" not in q][0]
 
 # message
 uris = [
-    'taxonomy-v1/product/4022',
+    "taxonomy-v1/product/4022",
 ]
 
-records = [{'path': 'REPROCESS_URI', 'kwargs': {'uri': uri}} for uri in uris]
+records = [{"path": "REPROCESS_URI", "kwargs": {"uri": uri}} for uri in uris]
 
 # execute
-sqs.batch_put_messages(queue_url, [{'path': 'REPROCESS_URI', 'kwargs': {'uri': uri}} for uri in uris])
-#client.send_message_batch(QueueUrl=queue_url,Entries=records)
+sqs.batch_put_messages(
+    queue_url, [{"path": "REPROCESS_URI", "kwargs": {"uri": uri}} for uri in uris]
+)
+# client.send_message_batch(QueueUrl=queue_url,Entries=records)

@@ -40,7 +40,7 @@ def put_record(stream_name, data, **kwargs):
 
 
 def build_record(asset_id):
-    return { "path": "REPROCESS_ASSET_ID", "kwargs": {"asset_id": asset_id} }
+    return {"path": "REPROCESS_ASSET_ID", "kwargs": {"asset_id": asset_id}}
 
 
 configure_connections("prod")
@@ -49,11 +49,13 @@ event = "No OGs were affected."
 
 fields = ["kwargs", "message", "event"]
 must = []
-must.append(Q("term", cloudwatch_logs__log_group="/aws/lambda/lam-product-tagger-collector"))
+must.append(
+    Q("term", cloudwatch_logs__log_group="/aws/lambda/lam-product-tagger-collector")
+)
 must.append(Q("term", event__keyword=event))
 must.append(Q("range", timestamp={"gte": "now-14d"}))
 
-#gt_dt = (datetime.now() - timedelta(days=3))
+# gt_dt = (datetime.now() - timedelta(days=3))
 
 s = (
     Search(using=constants.LOGS, index="application-logs-*")

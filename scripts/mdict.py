@@ -7,10 +7,12 @@ def get_nested(d, keys):
             return head
     return head
 
+
 def set_nested(d, keys, value):
     for key in keys[:-1]:
         d = d.setdefault(key, {})
     d[keys[-1]] = value
+
 
 my_dict = {}
 keys = ["a", "b", "c", "wiz", "bang"]

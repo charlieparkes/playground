@@ -8,7 +8,10 @@ import elasticsearch
 from aws_sso import boto3_client
 from elasticsearch_dsl import MultiSearch, Search, Q
 from everest_elasticsearch_dsl import configure_connections, constants
-from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import Outcome, ProductTaggerOutcome
+from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import (
+    Outcome,
+    ProductTaggerOutcome,
+)
 
 
 configure_connections("prod")
@@ -55,14 +58,16 @@ def prune_and_build_records(logs):
         for field in renamed_fields:
             if field[0] in updated_fields:
                 updated_fields[field[1]] = updated_fields.pop(field[0])
-        outcome = Outcome({
-            "timestamp": log.timestamp,
-            "actor": log.actor,
-            "flow": log.flow,
-            "queue": log.queue,
-            "assetId": log.object_uri,
-            "outcome": updated_fields,
-        })
+        outcome = Outcome(
+            {
+                "timestamp": log.timestamp,
+                "actor": log.actor,
+                "flow": log.flow,
+                "queue": log.queue,
+                "assetId": log.object_uri,
+                "outcome": updated_fields,
+            }
+        )
         outcome_hash = outcome.hash
         outcome_hashes[log.meta.id] = outcome_hash
 
@@ -80,19 +85,22 @@ def prune_and_build_records(logs):
         searches.append(outcome_s)
 
     try:
-        responses = execute_es_multisearch(searches, using=constants.STAGING, index="product_tagger_outcome")
+        responses = execute_es_multisearch(
+            searches, using=constants.STAGING, index="product_tagger_outcome"
+        )
     except ValueError:
-        import pdb; pdb.set_trace()
+        import pdb
+
+        pdb.set_trace()
         return [], []
 
     assert len(logs) == len(searches) == len(responses)
 
     for log, search, response in zip(logs, searches, responses):
         if response.hits.total > 0:
-            skipped_records.append({
-                "log": log.meta.id,
-                "outcome": outcome_hashes[log.meta.id]
-            })
+            skipped_records.append(
+                {"log": log.meta.id, "outcome": outcome_hashes[log.meta.id]}
+            )
         else:
             records.append(build_record(log))
     return records, skipped_records, outcome_hashes
@@ -102,13 +110,13 @@ lte = datetime(year=2019, month=6, day=6, tzinfo=datetime.now().tzinfo)
 gte = lte - timedelta(days=1)
 
 must = []
-#must.append(Q("term", container_name="ui-workflow"))
+# must.append(Q("term", container_name="ui-workflow"))
 must.append(Q("exists", field="flow"))
 must.append(Q("exists", field="queue"))
 must.append(Q("term", event__keyword="DECISION"))
 if gte and lte:
     must.append(Q("range", timestamp={"gte": gte, "lte": lte}))
-#must.append(Q("term", _id="b37c9225d7805a1e1fc26fe43b83c36c"))
+# must.append(Q("term", _id="b37c9225d7805a1e1fc26fe43b83c36c"))
 
 s = (
     Search(using=constants.LOGS, index="audit-logs-*")
@@ -145,4 +153,6 @@ new_records, new_skipped_records, outcome_hashes = prune_and_build_records(logs)
 records.extend(new_records)
 skipped_records.extend(new_skipped_records)
 
-import pdb; pdb.set_trace()
+import pdb
+
+pdb.set_trace()

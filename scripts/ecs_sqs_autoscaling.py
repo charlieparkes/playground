@@ -74,11 +74,12 @@ class Queue:
         ]
 
         common_timestamps = None
+
         def _set_intersection(s1, s2):
             return s1 & s2 if s1 else s2
 
         def _sort_datapoints(datapoints):
-            return sorted(datapoints, key=lambda s: s['Timestamp'])
+            return sorted(datapoints, key=lambda s: s["Timestamp"])
 
         # Fetch desired cloudwatch metrics
         cloudwatch = boto3.resource("cloudwatch", region_name=region)
@@ -94,20 +95,28 @@ class Queue:
             )
             if _check(stats) and stats.get("Datapoints", []):
                 datapoints = _sort_datapoints(stats["Datapoints"])
-                common_timestamps = _set_intersection(common_timestamps, set([s["Timestamp"] for s in datapoints]))
+                common_timestamps = _set_intersection(
+                    common_timestamps, set([s["Timestamp"] for s in datapoints])
+                )
                 metrics[m[0]] = datapoints
             else:
-                raise Exception(f"Metrics request failed or returned no datapoints ({cw_namespace} {m[1]} {cw_dimensions})")
+                raise Exception(
+                    f"Metrics request failed or returned no datapoints ({cw_namespace} {m[1]} {cw_dimensions})"
+                )
 
         # Reduce cloudwatch metric datapoints to common timestamps
         for m in cw_metrics:
             try:
                 metric = metrics[m[0]]
-                filtered_datapoints = [d for d in metric if d["Timestamp"] in common_timestamps]
+                filtered_datapoints = [
+                    d for d in metric if d["Timestamp"] in common_timestamps
+                ]
                 assert filtered_datapoints
                 metrics[m[0]] = _sort_datapoints(filtered_datapoints)[-1]
             except AssertionError:
-                raise Exception(f"Found no datapoints with common timestamps ({cw_namespace} {m[1]} {cw_dimensions})")
+                raise Exception(
+                    f"Found no datapoints with common timestamps ({cw_namespace} {m[1]} {cw_dimensions})"
+                )
 
         self.metrics = metrics
         for m in cw_metrics:
@@ -159,7 +168,11 @@ def estimate_pressure(queue: Queue, service: Service, target_task_pressure: int)
     if int(queue.num_msgs) > 0 and int(service.desired_count) == 0:
         return 200
     try:
-        return (int(queue.num_msgs) / int(service.desired_count)) / target_task_pressure * 100
+        return (
+            (int(queue.num_msgs) / int(service.desired_count))
+            / target_task_pressure
+            * 100
+        )
     except ZeroDivisionError:
         return 0
 
@@ -177,8 +190,12 @@ service = Service.load([service_name])[service_name]
 
 target_pressure = 5000
 print(f"{service_name} {queue_name}")
-print(f"Pressure (approx_num_msgs({queue.num_msgs}) / desired_count({service.desired_count})) / target_pressure({target_pressure}) * 100 -> {estimate_pressure(queue, service, target_pressure)}")
-print(f"MessageProcessingRatio num_sent({queue.num_sent}) / num_received({queue.num_received}) -> {estimate_load(queue)}")
+print(
+    f"Pressure (approx_num_msgs({queue.num_msgs}) / desired_count({service.desired_count})) / target_pressure({target_pressure}) * 100 -> {estimate_pressure(queue, service, target_pressure)}"
+)
+print(
+    f"MessageProcessingRatio num_sent({queue.num_sent}) / num_received({queue.num_received}) -> {estimate_load(queue)}"
+)
 
 # p = calculate_pressure(queue, service, target_task_pressure)
 # print(f"Pressure: {p}")

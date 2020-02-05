@@ -11,7 +11,9 @@ def _merge_similar(functions, iter):
                 try:
                     assert v == output[k]
                 except AssertionError as e:
-                    raise TypeError(f"Incompatible functions {functions}: {k} represented as both {v} and {output[k]}") from e
+                    raise TypeError(
+                        f"Incompatible functions {functions}: {k} represented as both {v} and {output[k]}"
+                    ) from e
             else:
                 output[k] = v
     return output
@@ -26,7 +28,11 @@ def merge_type_hints(functions):
 
 
 def get_defaults(signature):
-    return {k: v.default for k, v in signature.items() if v.default is not inspect.Parameter.empty}
+    return {
+        k: v.default
+        for k, v in signature.items()
+        if v.default is not inspect.Parameter.empty
+    }
 
 
 def validate(functions, params):
@@ -56,9 +62,9 @@ def validate(functions, params):
     return validated
 
 
-
 def test(wiz, foo: str, bar: str = "asdf", **kwargs):
     print(f"test(wiz={wiz}, foo={foo}, bar={bar})")
+
 
 def test2(a: int, foo: str, c, **kwargs):
     print(f"test2(a={a}, foo={foo}, c={c})")

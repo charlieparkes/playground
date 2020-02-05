@@ -1,24 +1,26 @@
 def digit_adder(x):
-    negative = (x < 0)
+    negative = x < 0
     if negative:
         x = str(x)[1:]
-    converted = [str(int(i)+1) for i in str(x)]
-    result = int(''.join(converted))
+    converted = [str(int(i) + 1) for i in str(x)]
+    result = int("".join(converted))
     return result if not negative else int(f"-{result}")
+
 
 def digit_adder_no_str(x):
     nums = []
     reduc = abs(x)
     while reduc >= 0:
-        nums.append((reduc%10) + 1)
+        nums.append((reduc % 10) + 1)
         reduc = reduc // 10
         if reduc == 0:
             break
     new_x = 0
     for n in nums[::-1]:
-        new_x *= (10 if n < 10 else 100)
+        new_x *= 10 if n < 10 else 100
         new_x += n
     return new_x if not (x < 0) else -1 * new_x
+
 
 tests = (
     (0, 1),

@@ -8,10 +8,19 @@ from aws_sso import boto3_client, boto3_resource
 from pathlib import Path
 
 
-bucket_name = 'everest-shared-ue2-backups'
+bucket_name = "everest-shared-ue2-backups"
 s3 = boto3_resource("s3", region_name="us-east-2")
 bucket = s3.Bucket(bucket_name)
-keys = [k for k in [o.key for o in bucket.objects.filter(Prefix='devpi/backups/20190417034801/everest/prod')] if ".dev" not in k and ".rc" not in k]
+keys = [
+    k
+    for k in [
+        o.key
+        for o in bucket.objects.filter(
+            Prefix="devpi/backups/20190417034801/everest/prod"
+        )
+    ]
+    if ".dev" not in k and ".rc" not in k
+]
 
 path = Path(str(Path().absolute()) + "/pkg")
 if not path.is_dir():

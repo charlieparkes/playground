@@ -2,7 +2,10 @@ from datetime import datetime
 
 from elasticsearch_dsl import MultiSearch, Search, Q
 from everest_elasticsearch_dsl import configure_connections, constants
-from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import Outcome, ProductTaggerOutcome
+from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import (
+    Outcome,
+    ProductTaggerOutcome,
+)
 
 
 # configure_connections("prod")
@@ -107,4 +110,6 @@ print(f"{spu3} {spu4}")
 # )
 
 
-import pdb; pdb.set_trace()
+import pdb
+
+pdb.set_trace()
