@@ -1,6 +1,20 @@
+import configparser
+import contextlib
+import getpass
+import os
+import platform
+import random
+import re
+import subprocess
+import sys
+import tempfile
+import time
+from unittest import mock
+
 import backoff
 import urllib3
-from aws_sso import boto3_client
+import aws_sso
+from botocore.exceptions import ClientError, NoCredentialsError
 from elasticsearch.exceptions import ConnectionTimeout
 from elasticsearch_dsl import Search, Q
 from everest_elasticsearch_dsl import configure_connections, constants
@@ -9,35 +23,123 @@ from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import (
     ProductTaggerOutcome,
 )
 from lpipe import sqs
-from lpipe.utils import batch
+from lpipe.utils import batch, set_env
 from tqdm import tqdm
+from pathlib import Path
+import math
+
+from db import db, Outcome
 
 
-# @backoff.on_exception(backoff.expo, ConnectionTimeout)
-# def update_hash(hit):
-#     # hit = ProductTaggerOutcome.get(h.meta.id)
+TEMP_CREDENTIALS_DURATION = 8 * 60 * 60  # 8 hours
+
+
+# def auth(role_name="PROD_Operator", duration=3600 * 8, region_name="us-east-2"):
+#     fetcher = credentials.MintelAWSCredentialsFetcher(
+#         "product_tagger_outcome_rehash",
+#         role_name=role_name,
+#         account_hint=role_name,
+#         duration=duration,
+#     )
+#     response = fetcher.fetch_credentials()
 #
-#     o = Outcome({**hit.to_dict(), "meta": hit.meta.to_dict()})
-#     tqdm.write(f"{o.hash}")
-#     if hit.outcomeHash != o.hash:
-#         tqdm.write(f"Updating hash of {hit.meta.id} (old: {hit.outcomeHash} new: {o.hash})")
-#         o.save()
+#     provider = credentials.MintelSSOSharedCredentialProvider()
+#     creds = {
+#         "aws_access_key_id": response["access_key"],
+#         "aws_secret_access_key": response["secret_key"],
+#         "aws_session_token": response["token"],
+#     }
+#     status = boto3.setup_default_session(
+#         creds, region_name=region_name
+#     )
+#     return (status, creds)
 
 
-client = boto3_client("sqs", region_name="us-east-2")
-queue_urls = client.list_queues(QueueNamePrefix="lam-shepherd")["QueueUrls"]
-queue_url = [q for q in queue_urls if "dlq" not in q][0]
+@contextlib.contextmanager
+def aws_auth(profiles, credentials_file="~/.aws/credentials", expire_threshold=1200):
+    """Context manager to auth multiple AWS accounts.
+
+    Dumps temporary credentials into a temporary file and
+    sets the AWS_SHARED_CREDENTIALS_FILE environment variable.
+
+    Args:
+        profiles (list[str]): List of profile names in the AWS credentials file.
+        credentials_file (str, optional): The path to the standard AWS credentials file
+            where Mintel IDP login info is stored.
+        expire_threshold (int): Cached credentials expiring during Terraform apply
+            can cause headaches. Cached credentials with fewer than `expire_threshold`
+            seconds left to expiration will be deleted.
+
+    """
+    expire_threshold += time.time()
+    for cache_credentials_path in (Path.home() / ".aws").glob("*.json"):
+        c_stat = cache_credentials_path.stat()
+        if c_stat.st_mtime + TEMP_CREDENTIALS_DURATION < expire_threshold:
+            cache_credentials_path.unlink()
+
+    config = configparser.RawConfigParser()
+    for profile in profiles:
+        providers = [
+            aws_sso.credentials.MintelSSOSharedCredentialProvider(
+                profile_name=profile,
+                creds_filename=credentials_file,
+                account_hint=profile,
+                duration=TEMP_CREDENTIALS_DURATION,
+            ),
+            aws_sso.credentials.PromptAllProvider(
+                account_hint=profile, duration=TEMP_CREDENTIALS_DURATION
+            ),
+        ]
+        for provider in providers:
+            creds = provider.load()
+            if creds is not None:
+                break
+        if creds is None:
+            raise Exception("credentials for profile %s not found" % (profile,))
+        config.add_section(profile)
+        config.set(profile, "aws_access_key_id", creds.access_key)
+        config.set(profile, "aws_secret_access_key", creds.secret_key)
+        config.set(profile, "aws_session_token", creds.token)
+    with tempfile.NamedTemporaryFile("w+") as temp_f:
+        config.write(temp_f)
+        temp_f.flush()
+        with set_env({
+                "AWS_SHARED_CREDENTIALS_FILE": os.path.abspath(temp_f.name),
+                "AWS_PROFILE": profiles[0]
+            }):
+            yield
+
+
+def pages(n_pages):
+    for i in range(1, n_pages + 1):
+        yield i
 
 
 def record(id):
     return sqs.build({"path": "UPDATE_OUTCOME_HASH", "kwargs": {"id": id}})
 
 
-pbar = tqdm(total=len(records))
-tqdm.write(f"Writing {len(records)} records to SQS")
-for b in batch(records, 10):
-    client.send_message_batch(QueueUrl=queue_url, Entries=[record(id) for id in b])
-    pbar.update(10)
-pbar.close()
+def write_records(page_size=1000):
+    assert db.connect()
+    n = Outcome.select().count()
+    n_pages = math.ceil(n / page_size)
 
-print("Done")
+    pbar = tqdm(total=n)
+    tqdm.write(f"Writing {n} records to SQS")
+
+    with aws_auth(["everest-prod"]):
+        client = aws_sso.boto3_client("sqs", region_name="us-east-2")
+        queue_urls = client.list_queues(QueueNamePrefix="lam-shepherd")["QueueUrls"]
+        queue_url = [q for q in queue_urls if "dlq" not in q][0]
+        for p in pages(n_pages):
+            entries = [record(o.doc_id) for o in Outcome.select().paginate(p, page_size)]
+            for b in batch(entries, 10):
+                client.send_message_batch(QueueUrl=queue_url, Entries=b)
+                pbar.update(10)
+
+    pbar.close()
+    print("Done")
+
+
+if __name__ == '__main__':
+    write_records()

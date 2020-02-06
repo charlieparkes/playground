@@ -10,6 +10,7 @@ from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import (
 )
 from lpipe import sqs
 from lpipe.utils import batch
+from peewee import IntegrityError
 from tqdm import tqdm
 
 from db import db, Outcome
@@ -18,8 +19,20 @@ from db import db, Outcome
 db.connect()
 try:
     db.create_tables([Outcome])
-except:
+except Exception as e:
+    print(e)
     pass
+
+
+def insert(records):
+    try:
+        Outcome.insert(records).execute()
+    except IntegrityError as e:
+        for r in records:
+            try:
+                Outcome.insert([r])
+            except Exception as e:
+                print(f"Failed to insert record {r}: {e.__class__} - {e}")
 
 
 configure_connections("prod")
@@ -31,13 +44,17 @@ s = (
 )
 resp = s.execute()
 pbar = tqdm(total=resp.hits.total)
-# records = []
+records = []
 for hit in s.scan():
     # update_hash(hit)
-    # records.append(hit.meta.id)
-    o = Outcome(id=hit.meta.id)
-    o.save()
+    records.append({"doc_id": hit.meta.id})
+    # o = Outcome(doc_id=hit.meta.id)
+    # o.save()
+    if len(records) >= 1000:
+        insert(records)
+        records = []
     pbar.update(1)
+insert(records)
 tqdm.write(f"Finished fetching")
 pbar.close()
 

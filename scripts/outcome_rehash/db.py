@@ -9,4 +9,4 @@ class BaseModel(Model):
 
 
 class Outcome(BaseModel):
-    id = CharField(unique=True)
+    doc_id = CharField(unique=True)
