@@ -1,7 +1,8 @@
 import hashlib
 import json
-from aws_sso import boto3_client
 from datetime import datetime
+
+from aws_sso import boto3_client
 
 client = boto3_client("kinesis", region_name="us-east-2")
 stream_name = "kin-st-sas-shepherd"

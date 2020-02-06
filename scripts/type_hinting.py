@@ -1,5 +1,5 @@
 import inspect
-from typing import cast, get_type_hints, Optional
+from typing import Optional, cast, get_type_hints
 
 
 def _merge_similar(functions, iter):

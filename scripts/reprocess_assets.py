@@ -3,9 +3,9 @@ import json
 from datetime import datetime, timedelta
 
 import boto3
-from elasticsearch_dsl import Search, Q
-from everest_elasticsearch_dsl import configure_connections, constants
 from aws_sso import boto3_client
+from elasticsearch_dsl import Q, Search
+from everest_elasticsearch_dsl import configure_connections, constants
 
 
 def batch(iterable, n=1):

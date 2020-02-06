@@ -1,6 +1,5 @@
 from playhouse.migrate import *
 
-
 db = SqliteDatabase("db.sqlite")
 migrator = SqliteMigrator(db)
 
@@ -11,9 +10,7 @@ migrator = SqliteMigrator(db)
 
 queued_field = BooleanField(default=False)
 
-migrate(
-    migrator.add_column('outcome', 'queued', queued_field),
-)
+migrate(migrator.add_column("outcome", "queued", queued_field),)
 
 
 # class Outcome(BaseModel):

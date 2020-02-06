@@ -1,11 +1,14 @@
 from __future__ import print_function
-from collections import defaultdict
-import boto3
-import json
+
 import argparse
-import time
+import json
 import os
 import re
+import time
+from collections import defaultdict
+
+import boto3
+
 
 """
 Copyright 2018 Signal Media Ltd

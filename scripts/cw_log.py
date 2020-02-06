@@ -4,10 +4,11 @@
 # in cases where the log stream or group need to be created, reduce the number of calls against
 # the cloudwatch API.
 
-import boto3
 import json
-from botocore.exceptions import ClientError
 from datetime import datetime, timezone
+
+import boto3
+from botocore.exceptions import ClientError
 
 client = boto3.client("logs", region_name="us-east-2")
 now = datetime.now(tz=timezone.utc)

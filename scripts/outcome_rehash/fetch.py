@@ -2,19 +2,16 @@ import backoff
 import urllib3
 from aws_sso import boto3_client
 from elasticsearch.exceptions import ConnectionTimeout
-from elasticsearch_dsl import Search, Q
+from elasticsearch_dsl import Q, Search
 from everest_elasticsearch_dsl import configure_connections, constants
 from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import (
-    Outcome,
-    ProductTaggerOutcome,
-)
+    Outcome, ProductTaggerOutcome)
 from lpipe import sqs
 from lpipe.utils import batch
 from peewee import IntegrityError
 from tqdm import tqdm
 
-from db import db, Outcome
-
+from db import Outcome, db
 
 db.connect()
 try:
@@ -55,7 +52,7 @@ for hit in s.scan():
     if len(records) >= 1000:
         insert(records)
         records = []
-        
+
 insert(records)
 
 tqdm.write(f"Finished fetching")

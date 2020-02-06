@@ -1,18 +1,16 @@
 import hashlib
 import json
+import pdb
 from datetime import datetime, timedelta
 
 import backoff
 import boto3
 import elasticsearch
 from aws_sso import boto3_client
-from elasticsearch_dsl import MultiSearch, Search, Q
+from elasticsearch_dsl import MultiSearch, Q, Search
 from everest_elasticsearch_dsl import configure_connections, constants
 from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import (
-    Outcome,
-    ProductTaggerOutcome,
-)
-
+    Outcome, ProductTaggerOutcome)
 
 configure_connections("prod")
 
@@ -153,6 +151,5 @@ new_records, new_skipped_records, outcome_hashes = prune_and_build_records(logs)
 records.extend(new_records)
 skipped_records.extend(new_skipped_records)
 
-import pdb
 
 pdb.set_trace()

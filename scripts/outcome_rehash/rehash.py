@@ -1,6 +1,7 @@
 import configparser
 import contextlib
 import getpass
+import math
 import os
 import platform
 import random
@@ -9,27 +10,23 @@ import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 from unittest import mock
 
+import aws_sso
 import backoff
 import urllib3
-import aws_sso
 from botocore.exceptions import ClientError, NoCredentialsError
 from elasticsearch.exceptions import ConnectionTimeout
-from elasticsearch_dsl import Search, Q
+from elasticsearch_dsl import Q, Search
 from everest_elasticsearch_dsl import configure_connections, constants
 from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import (
-    Outcome,
-    ProductTaggerOutcome,
-)
+    Outcome, ProductTaggerOutcome)
 from lpipe import sqs
 from lpipe.utils import batch, set_env
 from tqdm import tqdm
-from pathlib import Path
-import math
 
-from db import db, Outcome
-
+from db import Outcome, db
 
 TEMP_CREDENTIALS_DURATION = 8 * 60 * 60  # 8 hours
 
@@ -103,10 +100,12 @@ def aws_auth(profiles, credentials_file="~/.aws/credentials", expire_threshold=1
     with tempfile.NamedTemporaryFile("w+") as temp_f:
         config.write(temp_f)
         temp_f.flush()
-        with set_env({
+        with set_env(
+            {
                 "AWS_SHARED_CREDENTIALS_FILE": os.path.abspath(temp_f.name),
-                "AWS_PROFILE": profiles[0]
-            }):
+                "AWS_PROFILE": profiles[0],
+            }
+        ):
             yield
 
 
@@ -121,7 +120,7 @@ def record(id):
 
 def write_records(page_size=1000):
     assert db.connect()
-    query = Outcome.select(Outcome.doc_id).where(Outcome.queued==False)
+    query = Outcome.select(Outcome.doc_id).where(Outcome.queued == False)
     n = query.count()
     n_pages = math.ceil(n / page_size)
     sent_count = 0
@@ -142,7 +141,10 @@ def write_records(page_size=1000):
             for b in batch(records, 10):
                 record_batch = [o for o in b if not o.queued]
                 if record_batch:
-                    client.send_message_batch(QueueUrl=queue_url, Entries=[record(o.doc_id) for o in record_batch])
+                    client.send_message_batch(
+                        QueueUrl=queue_url,
+                        Entries=[record(o.doc_id) for o in record_batch],
+                    )
                     sent_count += len(record_batch)
                     for r in record_batch:
                         r.update(queued=True).execute()
@@ -155,5 +157,5 @@ def write_records(page_size=1000):
     print("Done")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     write_records()

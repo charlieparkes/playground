@@ -1,5 +1,8 @@
-from elasticsearch_dsl import Search, Q
+# setup
+from aws_sso import boto3_client
+from elasticsearch_dsl import Q, Search
 from everest_elasticsearch_dsl import configure_connections, constants
+from lpipe import sqs
 
 configure_connections("prod")
 
@@ -45,9 +48,6 @@ print(len(results))
 # ######################
 
 
-# setup
-from aws_sso import boto3_client
-from lpipe import sqs
 
 client = boto3_client("sqs", region_name="us-east-2")
 queue_urls = client.list_queues(QueueNamePrefix="lam-shepherd")["QueueUrls"]
