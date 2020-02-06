@@ -27,10 +27,12 @@ except Exception as e:
 def insert(records):
     try:
         Outcome.insert(records).execute()
+        pbar.update(len(records))
     except IntegrityError as e:
         for r in records:
             try:
                 Outcome.insert([r])
+                pbar.update(1)
             except Exception as e:
                 print(f"Failed to insert record {r}: {e.__class__} - {e}")
 
@@ -53,8 +55,9 @@ for hit in s.scan():
     if len(records) >= 1000:
         insert(records)
         records = []
-    pbar.update(1)
+        
 insert(records)
+
 tqdm.write(f"Finished fetching")
 pbar.close()
 

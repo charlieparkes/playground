@@ -121,8 +121,14 @@ def record(id):
 
 def write_records(page_size=1000):
     assert db.connect()
-    n = Outcome.select().count()
+    query = Outcome.select(Outcome.doc_id).where(Outcome.queued==False)
+    n = query.count()
     n_pages = math.ceil(n / page_size)
+    sent_count = 0
+
+    if n == 0:
+        print("Zero unsent outcomes. Nothing to do.")
+        return
 
     pbar = tqdm(total=n)
     tqdm.write(f"Writing {n} records to SQS")
@@ -132,12 +138,20 @@ def write_records(page_size=1000):
         queue_urls = client.list_queues(QueueNamePrefix="lam-shepherd")["QueueUrls"]
         queue_url = [q for q in queue_urls if "dlq" not in q][0]
         for p in pages(n_pages):
-            entries = [record(o.doc_id) for o in Outcome.select().paginate(p, page_size)]
-            for b in batch(entries, 10):
-                client.send_message_batch(QueueUrl=queue_url, Entries=b)
-                pbar.update(10)
+            records = query.paginate(p, page_size)
+            for b in batch(records, 10):
+                record_batch = [o for o in b if not o.queued]
+                if record_batch:
+                    client.send_message_batch(QueueUrl=queue_url, Entries=[record(o.doc_id) for o in record_batch])
+                    sent_count += len(record_batch)
+                    for r in record_batch:
+                        r.update(queued=True).execute()
+            pbar.update(len(records))
 
     pbar.close()
+    print(f"Sent {sent_count} messages")
+    unsent_count = query.count()
+    print(f"CHECK: {unsent_count == 0}")
     print("Done")
 
 

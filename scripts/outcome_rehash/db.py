@@ -10,3 +10,4 @@ class BaseModel(Model):
 
 class Outcome(BaseModel):
     doc_id = CharField(unique=True)
+    queued = BooleanField(default=False)
