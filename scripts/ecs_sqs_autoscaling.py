@@ -1,8 +1,9 @@
+import json
 from datetime import datetime, timedelta, timezone
 
 import boto3
 from botocore.exceptions import ClientError
-from lpipe.utils import get_nested, check_status
+from lpipe.utils import get_nested, check_status, hash
 
 from utils.aws import auth
 
@@ -41,7 +42,7 @@ def _call(_callable, *args, **kwargs):
 
 
 class Queue:
-    def __init__(self, name, url=None, now=None):
+    def __init__(self, name, now=None):
         self.client = boto3.client("sqs", region_name=region)
         self.name = name
         self.url = get_nested(
@@ -70,14 +71,17 @@ class Queue:
         metrics = {}
         cw_namespace = "AWS/SQS"
         cw_metrics = (
-            ("num_sent", "NumberOfMessagesSent", ["Sum"], "Count"),
-            ("num_received", "NumberOfMessagesReceived", ["Sum"], "Count"),
+            ("num_sent", "NumberOfMessagesSent", "Sum", "Count"),
+            ("num_received", "NumberOfMessagesReceived", "Sum", "Count"),
         )
         cw_dimensions = [
             {"Name": "QueueName", "Value": self.name,},
         ]
 
         common_timestamps = None
+
+        def _fmt_data(m):
+            return [{"Timestamp": x, "Sum": y} for x, y in dict(zip(m["Timestamps"], m["Values"])).items()]
 
         def _set_intersection(s1, s2):
             return s1 & s2 if s1 else s2
@@ -86,27 +90,44 @@ class Queue:
             return sorted(datapoints, key=lambda s: s["Timestamp"])
 
         # Fetch desired cloudwatch metrics
-        cloudwatch = boto3.resource("cloudwatch", region_name=region)
+        queries = []
         for m in cw_metrics:
-            metric = cloudwatch.Metric(cw_namespace, m[1])
-            stats = metric.get_statistics(
-                Dimensions=cw_dimensions,
-                Period=60,
-                StartTime=self.now - timedelta(minutes=5),
-                EndTime=self.now,
-                Statistics=m[2],
-                Unit=m[3],
-            )
-            if check_status(stats) and stats.get("Datapoints", []):
-                datapoints = _sort_datapoints(stats["Datapoints"])
+            _metric = {
+                'Namespace': cw_namespace,
+                'MetricName': m[1],
+                'Dimensions': cw_dimensions,
+            }
+            queries.append({
+                'Id': f"sqsautoscaler_{hash(json.dumps(_metric, sort_keys=True))[:8]}",
+                'MetricStat': {
+                    'Metric': _metric,
+                    'Stat': m[2],
+                    'Unit': m[3],
+                    'Period': 60,
+                },
+            })
+
+        cloudwatch = boto3.client("cloudwatch", region_name=region)
+        response = cloudwatch.get_metric_data(
+            MetricDataQueries=queries,
+            StartTime=self.now - timedelta(minutes=5),
+            EndTime=self.now,
+        )
+        assert check_status(response)
+
+        _data = {m["Label"]: _sort_datapoints(_fmt_data(m)) for m in response["MetricDataResults"]}
+
+        for m in cw_metrics:
+            try:
+                assert m[1] in _data
                 common_timestamps = _set_intersection(
-                    common_timestamps, set([s["Timestamp"] for s in datapoints])
+                    common_timestamps, set([s["Timestamp"] for s in _data[m[1]]])
                 )
-                metrics[m[0]] = datapoints
-            else:
+                metrics[m[0]] = _data[m[1]]
+            except AssertionError as e:
                 raise Exception(
                     f"Metrics request failed or returned no datapoints ({cw_namespace} {m[1]} {cw_dimensions})"
-                )
+                ) from e
 
         # Reduce cloudwatch metric datapoints to common timestamps
         for m in cw_metrics:
@@ -229,116 +250,3 @@ with auth(["everest-prod"]):
     resp = client.put_metric_data(Namespace=namespace, MetricData=metrics)
     metric_names = ', '.join([m["MetricName"] for m in metrics])
     print(f"Cloudwatch Metrics: {metric_names} ... {check_status(resp)}")
-
-# p = calculate_pressure(queue, service, target_task_pressure)
-# print(f"Pressure: {p}")
-#
-# l = calculate_load(queue)
-# print(f"Load: {l}")
-
-
-# def pressure(service_name: str, queue_name: str, target_task_pressure: int):
-#     sqs = boto3.client("sqs", region_name=region)
-#     ecs = boto3.client("ecs", region_name=region)
-#
-#     url = get_nested(
-#         _call(
-#             sqs.get_queue_url,
-#             QueueName=queue_name
-#         ),
-#         ["QueueUrl"]
-#     )
-#     queue_attr = int(get_nested(
-#         _call(
-#             sqs.get_queue_attributes,
-#             QueueUrl=url,
-#             AttributeNames=["ApproximateNumberOfMessages"]
-#         ),
-#         ["Attributes"]
-#     ))
-#     approx_num_msgs = get_nested(queue_attr, ["ApproximateNumberOfMessages"])
-#     approx_num_msgs = get_nested(queue_attr, ["ApproximateNumberOfMessages"])
-#     desired_count = int(_call(
-#         ecs.describe_services,
-#         services=[service_name]
-#     )["services"][0]["desiredCount"])
-#
-#     p = _calculate(approx_num_msgs, desired_count, target_task_pressure)
-#
-#     print(f"Write pressure to cloudwatch: {p}")
-#     now = datetime.now(tz=timezone.utc)
-
-
-# print("")
-# print(f"Simulating effects of autoscaling...")
-# print(f"( ( approx_num_msgs({approx_num_msgs}) / desired_count({desired_count}) ) / target_task_pressure({target_task_pressure}) ) * 100")
-# if p == float("inf"):
-#     pass
-# elif p > 100:
-#     print("We should scale UP.")
-#     new_desired_count = desired_count + 1
-#     ideal_p = pressure(approx_num_msgs, new_desired_count, target_task_pressure)
-#     while ideal_p > 100:
-#         new_desired_count += 1
-#         ideal_p = pressure(approx_num_msgs, new_desired_count, target_task_pressure)
-# elif p < 100:
-#     print("We should scale DOWN.")
-#     new_desired_count = desired_count - 1 if desired_count > 0 else desired_count
-#     ideal_p = pressure(approx_num_msgs, new_desired_count, target_task_pressure)
-#     while ideal_p < 100:
-#         new_desired_count -= 1
-#         if new_desired_count == 0:
-#             break
-#         ideal_p = pressure(approx_num_msgs, new_desired_count, target_task_pressure)
-#
-# print(f"ideal_pressure: {ideal_p}")
-# print(f"ideal_desired_count: {new_desired_count}")
-
-
-# print("")
-# print("Tests")
-#
-# tests = (
-#     (0, 0, 100, 0),
-#     (0, 1, 100, 0),
-#     (1, 0, 100, 200),
-#     (1000000, 0, 100, 200),
-#     (1000000, 1, 100, 1000000),
-#     (1, 1, 100, 1),
-#     (0, 0, 0, 100),
-#     (100, 0, 0, 100),
-#     (100, 1, 0, 100),
-#     (100, 9, 10, 111),
-#     (100, 10, 10, 100),
-#     (100, 11, 10, 90),
-#     (999999999, 10, 10, 999999999),
-#     (1000001, 1, 10000, 10000),
-#     (1000001, 10, 10000, 1000),
-#     (1000001, 100, 10000, 100),
-# )
-#
-# for t in tests:
-#     p = pressure(t[0], t[1], t[2])
-#     try:
-#         assert p == t[3]
-#         print(f"PASS get_pressure({t[0]}, {t[1]}, {t[2]}) == {t[3]}%")
-#     except AssertionError:
-#         print(f"FAIL get_pressure({t[0]}, {t[1]}, {t[2]})->{p}% != {t[3]}%")
-
-
-# client = boto3_client('cloudwatch', region_name='us-east-2')
-# client.put_metric_data(MetricData=[
-#         {
-#             'MetricName': 'string',
-#             'Dimensions': [
-#                 {
-#                     'Name': 'string',
-#                     'Value': 'string'
-#                 },
-#             ],
-#             'Timestamp': now,
-#             'Value': pressure,
-#             'Unit': "None",
-#             #'StorageResolution': 123
-#         },
-#     ])
