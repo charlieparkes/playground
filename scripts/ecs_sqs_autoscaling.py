@@ -41,12 +41,13 @@ def _call(_callable, *args, **kwargs):
 
 
 class Queue:
-    def __init__(self, name):
+    def __init__(self, name, url=None, now=None):
         self.client = boto3.client("sqs", region_name=region)
         self.name = name
         self.url = get_nested(
             _call(self.client.get_queue_url, QueueName=name), ["QueueUrl"]
         )
+        self.now = now if now else datetime.now(tz=timezone.utc)
 
         attr_map = (
             ("arn", "QueueArn"),
@@ -91,8 +92,8 @@ class Queue:
             stats = metric.get_statistics(
                 Dimensions=cw_dimensions,
                 Period=60,
-                StartTime=now - timedelta(minutes=5),
-                EndTime=now,
+                StartTime=self.now - timedelta(minutes=5),
+                EndTime=self.now,
                 Statistics=m[2],
                 Unit=m[3],
             )
@@ -184,6 +185,8 @@ def estimate_pct_of_desired_pressure(
 
 def estimate_msg_processing_ratio(queue: Queue):
     """Are we processing messages faster or slower than they're arriving?"""
+    if queue.num_sent == 0 and queue.num_received == 0:
+        return 0
     try:
         return (queue.num_sent / queue.num_received) * 100
     except ZeroDivisionError:
@@ -191,17 +194,17 @@ def estimate_msg_processing_ratio(queue: Queue):
 
 
 with auth(["everest-prod"]):
-    queue = Queue(queue_name)
+    queue = Queue(queue_name, now=now)
     service = Service.load([service_name])[service_name]
 
 target_pressure = 5000
 print(f"{service_name} {queue_name}")
-pct_of_desired_pressure = estimate_pct_of_desired_pressure(
-    queue, service, target_pressure
-)
-print(
-    f"Pressure (approx_num_msgs({queue.num_msgs}) / desired_count({service.desired_count})) / target_pressure({target_pressure}) * 100 -> {pct_of_desired_pressure}"
-)
+# pct_of_desired_pressure = estimate_pct_of_desired_pressure(
+#     queue, service, target_pressure
+# )
+# print(
+#     f"Pressure (approx_num_msgs({queue.num_msgs}) / desired_count({service.desired_count})) / target_pressure({target_pressure}) * 100 -> {pct_of_desired_pressure}"
+# )
 msg_processing_ratio = estimate_msg_processing_ratio(queue)
 print(
     f"MessageProcessingRatio num_sent({queue.num_sent}) / num_received({queue.num_received}) -> {msg_processing_ratio}"
@@ -210,7 +213,7 @@ print(
 namespace = "SQSAutoscaling"
 base = {
     "Dimensions": [
-        {"Name": "ServiceName", "Value": service_name},
+        # {"Name": "ServiceName", "Value": service_name},
         {"Name": "QueueName", "Value": queue_name},
     ],
     "Timestamp": now,
@@ -221,7 +224,7 @@ base = {
 with auth(["everest-prod"]):
     client = boto3.client("cloudwatch", region_name="us-east-2")
     metrics = []
-    metrics.append({**base, "MetricName": "PercentOfDesiredPressure", "Value": pct_of_desired_pressure})
+    # metrics.append({**base, "MetricName": "PercentOfDesiredPressure", "Value": pct_of_desired_pressure})
     metrics.append({**base, "MetricName": "MessageProcessingRatio", "Value": msg_processing_ratio})
     resp = client.put_metric_data(Namespace=namespace, MetricData=metrics)
     metric_names = ', '.join([m["MetricName"] for m in metrics])
