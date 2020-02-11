@@ -2,7 +2,10 @@ from datetime import datetime, timedelta, timezone
 
 import boto3
 from botocore.exceptions import ClientError
-from lpipe.utils import get_nested
+from lpipe.utils import get_nested, check_status
+
+from utils.aws import auth
+
 
 service_name = "pypedream-orchestrator"
 queue_name = "orchestrator-input-queue.fifo"
@@ -21,16 +24,16 @@ services = Service.load([service_name])
 """
 
 
-def _check(response, code=2, keys=["ResponseMetadata", "HTTPStatusCode"]):
-    status = get_nested(response, keys)
-    assert status // 100 == code
-    return status // 100 == code
+# def _check(response, code=2, keys=["ResponseMetadata", "HTTPStatusCode"]):
+#     status = get_nested(response, keys)
+#     assert status // 100 == code
+#     return status // 100 == code
 
 
 def _call(_callable, *args, **kwargs):
     try:
         resp = _callable(*args, **kwargs)
-        _check(resp)
+        check_status(resp)
         return resp
     except ClientError as e:
         if e.response.get("Error", {}).get("Code") != "ResourceAlreadyExistsException":
@@ -93,7 +96,7 @@ class Queue:
                 Statistics=m[2],
                 Unit=m[3],
             )
-            if _check(stats) and stats.get("Datapoints", []):
+            if check_status(stats) and stats.get("Datapoints", []):
                 datapoints = _sort_datapoints(stats["Datapoints"])
                 common_timestamps = _set_intersection(
                     common_timestamps, set([s["Timestamp"] for s in datapoints])
@@ -163,7 +166,9 @@ class Service:
         return services
 
 
-def estimate_pressure(queue: Queue, service: Service, target_task_pressure: int):
+def estimate_pct_of_desired_pressure(
+    queue: Queue, service: Service, target_task_pressure: int
+):
     """Are there enough tasks for the number of messages we have?"""
     if int(queue.num_msgs) > 0 and int(service.desired_count) == 0:
         return 200
@@ -177,7 +182,7 @@ def estimate_pressure(queue: Queue, service: Service, target_task_pressure: int)
         return 0
 
 
-def estimate_load(queue: Queue):
+def estimate_msg_processing_ratio(queue: Queue):
     """Are we processing messages faster or slower than they're arriving?"""
     try:
         return (queue.num_sent / queue.num_received) * 100
@@ -185,17 +190,42 @@ def estimate_load(queue: Queue):
         return 0
 
 
-queue = Queue(queue_name)
-service = Service.load([service_name])[service_name]
+with auth(["everest-prod"]):
+    queue = Queue(queue_name)
+    service = Service.load([service_name])[service_name]
 
 target_pressure = 5000
 print(f"{service_name} {queue_name}")
-print(
-    f"Pressure (approx_num_msgs({queue.num_msgs}) / desired_count({service.desired_count})) / target_pressure({target_pressure}) * 100 -> {estimate_pressure(queue, service, target_pressure)}"
+pct_of_desired_pressure = estimate_pct_of_desired_pressure(
+    queue, service, target_pressure
 )
 print(
-    f"MessageProcessingRatio num_sent({queue.num_sent}) / num_received({queue.num_received}) -> {estimate_load(queue)}"
+    f"Pressure (approx_num_msgs({queue.num_msgs}) / desired_count({service.desired_count})) / target_pressure({target_pressure}) * 100 -> {pct_of_desired_pressure}"
 )
+msg_processing_ratio = estimate_msg_processing_ratio(queue)
+print(
+    f"MessageProcessingRatio num_sent({queue.num_sent}) / num_received({queue.num_received}) -> {msg_processing_ratio}"
+)
+
+namespace = "SQSAutoscaling"
+base = {
+    "Dimensions": [
+        {"Name": "ServiceName", "Value": service_name},
+        {"Name": "QueueName", "Value": queue_name},
+    ],
+    "Timestamp": now,
+    "Unit": "None",
+    #'StorageResolution': 123
+}
+
+with auth(["everest-prod"]):
+    client = boto3.client("cloudwatch", region_name="us-east-2")
+    metrics = []
+    metrics.append({**base, "MetricName": "PercentOfDesiredPressure", "Value": pct_of_desired_pressure})
+    metrics.append({**base, "MetricName": "MessageProcessingRatio", "Value": msg_processing_ratio})
+    resp = client.put_metric_data(Namespace=namespace, MetricData=metrics)
+    metric_names = ', '.join([m["MetricName"] for m in metrics])
+    print(f"Cloudwatch Metrics: {metric_names} ... {check_status(resp)}")
 
 # p = calculate_pressure(queue, service, target_task_pressure)
 # print(f"Pressure: {p}")
