@@ -18,14 +18,16 @@ import backoff
 import urllib3
 from botocore.exceptions import ClientError, NoCredentialsError
 
+from .. import *
+
 TEMP_CREDENTIALS_DURATION = 8 * 60 * 60  # 8 hours
 
 
-@backoff.on_exception(
-    backoff.expo, pytest_localstack.exceptions.TimeoutError, max_tries=3
-)
-def check(session, service):
-    return SERVICE_CHECKS[service](session)
+# @backoff.on_exception(
+#     backoff.expo, pytest_localstack.exceptions.TimeoutError, max_tries=3
+# )
+# def check(session, service):
+#     return SERVICE_CHECKS[service](session)
 
 
 @backoff.on_exception(backoff.expo, (TimeoutError, ClientError), max_time=30)
@@ -41,7 +43,7 @@ def check_status(response, code=2, keys=["ResponseMetadata", "HTTPStatusCode"]):
 
 
 @contextlib.contextmanager
-def aws_auth(profiles, credentials_file="~/.aws/credentials", expire_threshold=1200):
+def auth(profiles, credentials_file="~/.aws/credentials", expire_threshold=1200):
     """Context manager to auth multiple AWS accounts.
 
     Dumps temporary credentials into a temporary file and
