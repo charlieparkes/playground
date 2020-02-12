@@ -205,7 +205,7 @@ class Service:
         return f"Service<{self.name}>"
 
     @classmethod
-    def load(cls, names):
+    def load_services(cls, names):
         client = boto3.client("ecs", region_name=region)
         descriptions = _call(client.describe_services, services=[service_name])[
             "services"
@@ -215,6 +215,10 @@ class Service:
             s = cls(d)
             services[s.name] = s
         return services
+
+    @classmethod
+    def load(cls, name):
+        return cls.load_services([name])[name]
 
 
 def estimate_pct_of_desired_pressure(
@@ -233,7 +237,7 @@ def estimate_pct_of_desired_pressure(
         return 0
 
 
-def estimate_msg_processing_ratio(queue: Queue, service_name: str):
+def estimate_msg_processing_ratio(queue: Queue, svc_name: str):
     """
     Scale in/out with target tracking around (sent / received) @ 100.
 
@@ -247,18 +251,13 @@ def estimate_msg_processing_ratio(queue: Queue, service_name: str):
         val = (queue.num_sent / queue.num_received) * 100
 
         # never scale down when queue age is greater than one hour
-        if val < 100 and queue.age_oldest_msg / 60 / 60 > 1:
-            return 100
-        else:
-            return val
+        return 100 if val < 100 and queue.age_oldest_msg / 60 / 60 > 1 else val
 
-    # if the queue is active, but we previously scaled to zero
-    if queue.num_msgs > 0:
-        svc = Service.load([service_name])[service_name]
-        if svc.running_count == 0:
-            return 150
+    # the queue is active, but we previously scaled to zero
+    if queue.num_msgs > 0 and Service.load(svc_name).running_count == 0:
+        return 150
 
-    # If nothing else, scale in.
+    # default behavior, scale in
     return 0
 
 
