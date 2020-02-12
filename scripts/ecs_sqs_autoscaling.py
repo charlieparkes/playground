@@ -8,27 +8,21 @@ from lpipe.utils import get_nested, check_status, hash
 from utils.aws import auth
 
 
-service_name = "pypedream-orchestrator"
-queue_name = "orchestrator-input-queue.fifo"
+# service_name = "pypedream-orchestrator"
+# queue_name = "orchestrator-input-queue.fifo"
 # service_name = "pypedream-taxonomy"
 # queue_name = "taxonomy-input-queue.fifo"
+
+queue_name = "publish-expert-input-queue"
+service_name = "pypedream-publish-expert"
+
+# queue_name = "quality_checker_entity-input-queue.fifo"
+
+# queue_name = "language_checker_entity-input-queue.fifo"
+# service_name = "pypedream-language_checker_entity"
+
 now = datetime.now(tz=timezone.utc)
 region = "us-east-2"
-
-"""
-from scripts.ecs_sqs_autoscaling import Queue, Service
-service_name = "pypedream-taxonomy"
-queue_name = "taxonomy-input-queue.fifo"
-target_task_pressure = 5000
-queue = Queue(queue_name)
-services = Service.load([service_name])
-"""
-
-
-# def _check(response, code=2, keys=["ResponseMetadata", "HTTPStatusCode"]):
-#     status = get_nested(response, keys)
-#     assert status // 100 == code
-#     return status // 100 == code
 
 
 def _call(_callable, *args, **kwargs):
@@ -37,51 +31,39 @@ def _call(_callable, *args, **kwargs):
         check_status(resp)
         return resp
     except ClientError as e:
-        if e.response.get("Error", {}).get("Code") != "ResourceAlreadyExistsException":
-            raise
+        raise
 
 
 class Queue:
-    def __init__(self, name, now=None):
+    def __init__(self, name, url=None, now=None):
         self.client = boto3.client("sqs", region_name=region)
         self.name = name
-        self.url = get_nested(
-            _call(self.client.get_queue_url, QueueName=name), ["QueueUrl"]
-        )
+        self._url = url
         self.now = now if now else datetime.now(tz=timezone.utc)
-
-        attr_map = (
-            ("arn", "QueueArn"),
-            ("num_msgs", "ApproximateNumberOfMessages"),
-            # ("num_msgs_visible", "ApproximateNumberOfMessagesVisible"),
-            # ("num_msgs_not_visible", "ApproximateNumberOfMessagesNotVisible"),
-            # ("num_msgs_delayed", "ApproximateNumberOfMessagesDelayed"),
-        )
-        self.attributes = get_nested(
-            _call(
-                self.client.get_queue_attributes,
-                QueueUrl=self.url,
-                AttributeNames=[a[1] for a in attr_map],
-            ),
-            ["Attributes"],
-        )
-        for a in attr_map:
-            setattr(self, a[0], self.attributes[a[1]])
 
         metrics = {}
         cw_namespace = "AWS/SQS"
         cw_metrics = (
             ("num_sent", "NumberOfMessagesSent", "Sum", "Count"),
             ("num_received", "NumberOfMessagesReceived", "Sum", "Count"),
+            ("num_visible", "ApproximateNumberOfMessagesVisible", "Sum", "Count"),
+            ("num_not_visible", "ApproximateNumberOfMessagesNotVisible", "Sum", "Count"),
+            ("num_delayed", "ApproximateNumberOfMessagesDelayed", "Sum", "Count"),
+            ("age_oldest_msg", "ApproximateAgeOfOldestMessage", "Average", "Seconds"),
         )
         cw_dimensions = [
-            {"Name": "QueueName", "Value": self.name,},
+            {"Name": "QueueName", "Value": self.name},
         ]
-
         common_timestamps = None
 
-        def _fmt_data(m):
-            return [{"Timestamp": x, "Sum": y} for x, y in dict(zip(m["Timestamps"], m["Values"])).items()]
+        def _get_metric_stat(m):
+            return queries[m["Id"]]["MetricStat"]["Stat"]
+
+        def _fmt_data(m, metric_stat):
+            return [
+                {"Timestamp": x, metric_stat: y}
+                for x, y in dict(zip(m["Timestamps"], m["Values"])).items()
+            ]
 
         def _set_intersection(s1, s2):
             return s1 & s2 if s1 else s2
@@ -90,32 +72,42 @@ class Queue:
             return sorted(datapoints, key=lambda s: s["Timestamp"])
 
         # Fetch desired cloudwatch metrics
-        queries = []
+        queries = {}
         for m in cw_metrics:
             _metric = {
-                'Namespace': cw_namespace,
-                'MetricName': m[1],
-                'Dimensions': cw_dimensions,
+                "Namespace": cw_namespace,
+                "MetricName": m[1],
+                "Dimensions": cw_dimensions,
             }
-            queries.append({
-                'Id': f"sqsautoscaler_{hash(json.dumps(_metric, sort_keys=True))[:8]}",
-                'MetricStat': {
-                    'Metric': _metric,
-                    'Stat': m[2],
-                    'Unit': m[3],
-                    'Period': 60,
+            _id = f"sqsautoscaler_{m[1]}_{hash(json.dumps(_metric, sort_keys=True))[:8]}"
+            queries[_id] = {
+                "Id": _id,
+                "MetricStat": {
+                    "Metric": _metric,
+                    "Stat": m[2],
+                    "Unit": m[3],
+                    "Period": 60,
                 },
-            })
+            }
 
         cloudwatch = boto3.client("cloudwatch", region_name=region)
         response = cloudwatch.get_metric_data(
-            MetricDataQueries=queries,
+            MetricDataQueries=list(queries.values()),
             StartTime=self.now - timedelta(minutes=5),
             EndTime=self.now,
         )
+        # response = _call(
+        #     cloudwatch.get_metric_data,
+        #     MetricDataQueries=list(queries.values()),
+        #     StartTime=self.now - timedelta(minutes=5),
+        #     EndTime=self.now
+        # )
         assert check_status(response)
 
-        _data = {m["Label"]: _sort_datapoints(_fmt_data(m)) for m in response["MetricDataResults"]}
+        _data = {
+            m["Label"]: _sort_datapoints(_fmt_data(m, _get_metric_stat(m)))
+            for m in response["MetricDataResults"]
+        }
 
         for m in cw_metrics:
             try:
@@ -147,10 +139,47 @@ class Queue:
         for m in cw_metrics:
             metric_name = m[0]
             metric = metrics[metric_name]
-            setattr(self, metric_name, float(metric["Sum"]))
+            setattr(self, metric_name, float(metric[m[2]]))
 
-    def attr(name):
-        return self.attributes[name]
+    @property
+    def url(self):
+        if not self._url:
+            self._url = get_nested(
+                _call(self.client.get_queue_url, QueueName=self.name), ["QueueUrl"]
+            )
+        return self._url
+
+    @property
+    def num_msgs(self):
+        return self.num_visible + self.num_not_visible + self.num_delayed
+
+    def __getattr__(self, attr):
+        try:
+            return self.__getattribute__(name)
+        except Exception as e:
+            if not self.attributes:
+                attr_map = (
+                    ("arn", "QueueArn"),
+                    # ("num_msgs", "ApproximateNumberOfMessages"),
+                    # ("num_msgs_visible", "ApproximateNumberOfMessagesVisible"),
+                    # ("num_msgs_not_visible", "ApproximateNumberOfMessagesNotVisible"),
+                    # ("num_msgs_delayed", "ApproximateNumberOfMessagesDelayed"),
+                )
+                self.attributes = get_nested(
+                    _call(
+                        self.client.get_queue_attributes,
+                        QueueUrl=self.url,
+                        AttributeNames=[a[1] for a in attr_map],
+                    ),
+                    ["Attributes"],
+                )
+                for a in attr_map:
+                    setattr(self, a[0], self.attributes[a[1]])
+
+            if attr in self.attributes:
+                return self.attributes[attr]
+            else:
+                raise
 
     def __repr__(self):
         return f"Queue<{self.name}>"
@@ -204,31 +233,61 @@ def estimate_pct_of_desired_pressure(
         return 0
 
 
-def estimate_msg_processing_ratio(queue: Queue):
+def estimate_msg_processing_ratio(queue: Queue, service_name: str):
+    """
+    Scale in/out with target tracking around (sent / received) @ 100.
+
+    We'll never scale up if nothing is being sent to the queue unless there are
+    messages in the queue and no tasks running.
+
+    tl;dr Are we processing messages faster or slower than they're arriving?
+    """
+    if queue.num_sent > 0 and queue.num_received > 0:
+        # steady state
+        val = (queue.num_sent / queue.num_received) * 100
+
+        # never scale down when queue age is greater than one hour
+        if val < 100 and queue.age_oldest_msg / 60 / 60 > 1:
+            return 100
+        else:
+            return val
+
+    # if the queue is active, but we previously scaled to zero
+    if queue.num_msgs > 0:
+        svc = Service.load([service_name])[service_name]
+        if svc.running_count == 0:
+            return 150
+
+    # If nothing else, scale in.
+    return 0
+
+
+def estimate_msg_processing_ratio_old(queue: Queue):
     """Are we processing messages faster or slower than they're arriving?"""
     if queue.num_sent == 0 and queue.num_received == 0:
         return 0
     try:
         return (queue.num_sent / queue.num_received) * 100
     except ZeroDivisionError:
-        return 0
+        return 400
 
-
-with auth(["everest-prod"]):
-    queue = Queue(queue_name, now=now)
-    service = Service.load([service_name])[service_name]
 
 target_pressure = 5000
-print(f"{service_name} {queue_name}")
-# pct_of_desired_pressure = estimate_pct_of_desired_pressure(
-#     queue, service, target_pressure
-# )
+
+with auth(["everest-qa"]):
+    queue = Queue(queue_name, now=now)
+    # service = Service.load([service_name])[service_name]
+    # pct_of_desired_pressure = estimate_pct_of_desired_pressure(
+    #     queue, service, target_pressure
+    # )
+    msg_processing_ratio = estimate_msg_processing_ratio(queue, service_name)
+
+# print(f"{service_name} {queue_name}")
 # print(
 #     f"Pressure (approx_num_msgs({queue.num_msgs}) / desired_count({service.desired_count})) / target_pressure({target_pressure}) * 100 -> {pct_of_desired_pressure}"
 # )
-msg_processing_ratio = estimate_msg_processing_ratio(queue)
 print(
-    f"MessageProcessingRatio num_sent({queue.num_sent}) / num_received({queue.num_received}) -> {msg_processing_ratio}"
+    f"MessageProcessingRatio num_msgs({queue.num_msgs}) and num_sent({queue.num_sent}) / num_received({queue.num_received}) -> {msg_processing_ratio}"
 )
 
 namespace = "SQSAutoscaling"
@@ -242,11 +301,11 @@ base = {
     #'StorageResolution': 123
 }
 
-with auth(["everest-prod"]):
-    client = boto3.client("cloudwatch", region_name="us-east-2")
-    metrics = []
-    # metrics.append({**base, "MetricName": "PercentOfDesiredPressure", "Value": pct_of_desired_pressure})
-    metrics.append({**base, "MetricName": "MessageProcessingRatio", "Value": msg_processing_ratio})
-    resp = client.put_metric_data(Namespace=namespace, MetricData=metrics)
-    metric_names = ', '.join([m["MetricName"] for m in metrics])
-    print(f"Cloudwatch Metrics: {metric_names} ... {check_status(resp)}")
+# with auth(["everest-qa"]):
+#     client = boto3.client("cloudwatch", region_name="us-east-2")
+#     metrics = []
+#     # metrics.append({**base, "MetricName": "PercentOfDesiredPressure", "Value": pct_of_desired_pressure})
+#     metrics.append({**base, "MetricName": "MessageProcessingRatio", "Value": msg_processing_ratio})
+#     resp = client.put_metric_data(Namespace=namespace, MetricData=metrics)
+#     metric_names = ', '.join([m["MetricName"] for m in metrics])
+#     print(f"Push {metric_names} to Cloudwatch ... {'OK' if check_status(resp) == 200 else 'ERR'}")
