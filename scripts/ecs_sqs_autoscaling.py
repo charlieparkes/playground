@@ -8,13 +8,14 @@ from lpipe.utils import get_nested, check_status, hash
 from utils.aws import auth
 
 
-# service_name = "pypedream-orchestrator"
-# queue_name = "orchestrator-input-queue.fifo"
+service_name = "pypedream-orchestrator"
+queue_name = "orchestrator-input-queue.fifo"
+
 # service_name = "pypedream-taxonomy"
 # queue_name = "taxonomy-input-queue.fifo"
 
-queue_name = "publish-expert-input-queue"
-service_name = "pypedream-publish-expert"
+# queue_name = "publish-expert-input-queue"
+# service_name = "pypedream-publish-expert"
 
 # queue_name = "quality_checker_entity-input-queue.fifo"
 
@@ -46,6 +47,7 @@ class Queue:
         cw_metrics = (
             ("num_sent", "NumberOfMessagesSent", "Sum", "Count"),
             ("num_received", "NumberOfMessagesReceived", "Sum", "Count"),
+            ("num_deleted", "NumberOfMessagesDeleted", "Sum", "Count"),
             ("num_visible", "ApproximateNumberOfMessagesVisible", "Sum", "Count"),
             ("num_not_visible", "ApproximateNumberOfMessagesNotVisible", "Sum", "Count"),
             ("num_delayed", "ApproximateNumberOfMessagesDelayed", "Sum", "Count"),
@@ -91,18 +93,12 @@ class Queue:
             }
 
         cloudwatch = boto3.client("cloudwatch", region_name=region)
-        response = cloudwatch.get_metric_data(
+        response = _call(
+            cloudwatch.get_metric_data,
             MetricDataQueries=list(queries.values()),
             StartTime=self.now - timedelta(minutes=5),
-            EndTime=self.now,
+            EndTime=self.now
         )
-        # response = _call(
-        #     cloudwatch.get_metric_data,
-        #     MetricDataQueries=list(queries.values()),
-        #     StartTime=self.now - timedelta(minutes=5),
-        #     EndTime=self.now
-        # )
-        assert check_status(response)
 
         _data = {
             m["Label"]: _sort_datapoints(_fmt_data(m, _get_metric_stat(m)))
@@ -122,6 +118,27 @@ class Queue:
                 ) from e
 
         # Reduce cloudwatch metric datapoints to common timestamps
+        # for m in cw_metrics:
+        #     try:
+        #         metric = metrics[m[0]]
+        #         filtered_datapoints = [
+        #             d for d in metric if d["Timestamp"] in common_timestamps
+        #         ]
+        #         assert filtered_datapoints
+        #         metrics[m[0]] = _sort_datapoints(filtered_datapoints)[-1]
+        #     except AssertionError:
+        #         raise Exception(
+        #             f"Found no datapoints with common timestamps ({cw_namespace} {m[1]} {cw_dimensions})"
+        #         )
+        #
+        # self.metrics = metrics
+        # for m in cw_metrics:
+        #     metric_name = m[0]
+        #     metric = metrics[metric_name]
+        #     setattr(self, metric_name, float(metric[m[2]]))
+
+
+        # Reduce cloudwatch metric datapoints to common timestamps
         for m in cw_metrics:
             try:
                 metric = metrics[m[0]]
@@ -129,7 +146,8 @@ class Queue:
                     d for d in metric if d["Timestamp"] in common_timestamps
                 ]
                 assert filtered_datapoints
-                metrics[m[0]] = _sort_datapoints(filtered_datapoints)[-1]
+                # metrics[m[0]] = _sort_datapoints(filtered_datapoints)[-1]
+                metrics[m[0]] = _sort_datapoints(filtered_datapoints)
             except AssertionError:
                 raise Exception(
                     f"Found no datapoints with common timestamps ({cw_namespace} {m[1]} {cw_dimensions})"
@@ -139,7 +157,9 @@ class Queue:
         for m in cw_metrics:
             metric_name = m[0]
             metric = metrics[metric_name]
-            setattr(self, metric_name, float(metric[m[2]]))
+            vals = [float(met[m[2]]) for met in metric]
+            val = sum(vals) / len(vals)
+            setattr(self, metric_name, val)
 
     @property
     def url(self):
@@ -237,7 +257,7 @@ def estimate_pct_of_desired_pressure(
         return 0
 
 
-def estimate_msg_processing_ratio(queue: Queue, svc_name: str):
+def estimate_msg_processing_ratio(queue: Queue, svc_name: str, target_pressure: int = 200):
     """
     Scale in/out with target tracking around (sent / received) @ 100.
 
@@ -250,11 +270,25 @@ def estimate_msg_processing_ratio(queue: Queue, svc_name: str):
         # steady state
         val = (queue.num_sent / queue.num_received) * 100
 
-        # never scale down when queue age is greater than one hour
-        return 100 if val < 100 and queue.age_oldest_msg / 60 / 60 > 1 else val
+        # never scale down if the queue age is greater than one hour
+        if val < 100 and queue.age_oldest_msg / 60 / 60 > 1:
+            print(f"Will override MessageProcessingRatio: {val}")
+            return 100
 
-    # the queue is active, but we previously scaled to zero
-    if queue.num_msgs > 0 and Service.load(svc_name).running_count == 0:
+        # if keeping up, try to gradually scale down
+        svc = Service.load(svc_name)
+        if svc.desired_count > 1 and queue.age_oldest_msg < 60 and 95 <= val <= 105:
+            print(f"Will override MessageProcessingRatio: {val}")
+            return (
+                int(queue.num_sent) / int(svc.desired_count) / target_pressure
+            ) * 100
+
+        return val
+
+    # if the queue is active, but we previously scaled to zero
+    svc = Service.load(svc_name)
+    if queue.num_msgs > 0 and svc.desired_count == 0:
+        print(f"Will override MessageProcessingRatio: {val}")
         return 150
 
     # default behavior, scale in
@@ -285,9 +319,10 @@ with auth(["everest-qa"]):
 # print(
 #     f"Pressure (approx_num_msgs({queue.num_msgs}) / desired_count({service.desired_count})) / target_pressure({target_pressure}) * 100 -> {pct_of_desired_pressure}"
 # )
-print(
-    f"MessageProcessingRatio num_msgs({queue.num_msgs}) and num_sent({queue.num_sent}) / num_received({queue.num_received}) -> {msg_processing_ratio}"
-)
+# print(
+#     f"MessageProcessingRatio num_msgs({queue.num_msgs}) and num_sent({queue.num_sent}) / num_received({queue.num_received}) -> {msg_processing_ratio}"
+# )
+print(f"MessageProcessingRatio: {msg_processing_ratio}")
 
 namespace = "SQSAutoscaling"
 base = {
