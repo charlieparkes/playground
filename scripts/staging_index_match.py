@@ -19,6 +19,9 @@ def get_staging_index(og_id):
         return "pfb_og"
     return f"{groups[0]}_og"
 
+########
+# TESTS
+########
 ids = [
     ("PAT:MUL/35678913418", "pat_og"),
     ("PAT:PFB/356789134asdfasdf18", "pfb_og"),
