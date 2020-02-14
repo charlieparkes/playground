@@ -12,8 +12,8 @@ def get_staging_index_from_og_id(id):
     return f"{index}_og"
 
 
-def get_staging_index_from_og_id_regex(id):
-    groups = [g.lower() for g in re.findall('([A-Z]+)', id)]
+def get_staging_index(og_id):
+    groups = [g.lower() for g in re.findall('([A-Z]+)', og_id)]
     assert len(groups) >= 1
     if set(["pat", "pfb"]).issubset(groups):
         return "pfb_og"
@@ -34,6 +34,6 @@ for id, index in ids:
 
 print("regex")
 for id, index in ids:
-    result = get_staging_index_from_og_id_regex(id)
+    result = get_staging_index(id)
     print(f"id: {id}, index: {index}, result: {result}")
     assert result == index
