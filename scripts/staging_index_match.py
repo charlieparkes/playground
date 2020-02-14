@@ -13,13 +13,11 @@ def get_staging_index_from_og_id(id):
 
 
 def get_staging_index_from_og_id_regex(id):
-    def _index(prefix):
-        return f"{prefix}_og"
     groups = [g.lower() for g in re.findall('([A-Z]+)', id)]
     assert len(groups) >= 1
     if set(["pat", "pfb"]).issubset(groups):
-        return _index("pfb")
-    return _index(groups[0])
+        return "pfb_og"
+    return f"{groups[0]}_og"
 
 ids = [
     ("PAT:MUL/35678913418", "pat_og"),
