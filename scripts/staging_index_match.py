@@ -19,6 +19,7 @@ def get_staging_index(og_id):
         return "pfb_og"
     return f"{groups[0]}_og"
 
+
 ########
 # TESTS
 ########
