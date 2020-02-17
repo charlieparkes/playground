@@ -108,7 +108,7 @@ class Service(Resource):
 
     @property
     def tabulate(self):
-        return [self.name, self.desired_count, self.cpu, self.memory, self.memory_reservation]
+        return [self.name, self.desired_count, self.cpu[0], self.memory[0], self.memory_reservation[0], self.cpu[1], self.memory[1], self.memory_reservation[1]]
 
     @property
     def task_definition(self):
@@ -119,20 +119,20 @@ class Service(Resource):
     @property
     def cpu(self):
         if not getattr(self, "_cpu", None):
-            self._cpu = self.task_definition.reservations["cpu"] * self.desired_count
-        return self._cpu
+            self._cpu = self.task_definition.reservations["cpu"]
+        return (self._cpu, self._cpu * self.desired_count)
 
     @property
     def memory(self):
         if not getattr(self, "_memory", None):
-            self._memory = self.task_definition.reservations["memory"] * self.desired_count
-        return self._memory
+            self._memory = self.task_definition.reservations["memory"]
+        return (self._memory, self._memory * self.desired_count)
 
     @property
     def memory_reservation(self):
         if not getattr(self, "_memory_reservation", None):
-            self._memory_reservation = self.task_definition.reservations["memory_reservation"] * self.desired_count
-        return self._memory_reservation
+            self._memory_reservation = self.task_definition.reservations["memory_reservation"]
+        return (self._memory_reservation, self._memory_reservation * self.desired_count)
 
     @classmethod
     def load_all(cls, services=None, cluster='default'):
@@ -167,20 +167,19 @@ class Service(Resource):
 
 @click.command()
 @click.option("--sort", default="cpu")
-def cmd(sort):
-    with auth(["everest-qa"]):
+@click.option("--env", default="prod")
+def cmd(env, sort):
+    with auth([f"everest-{env}"]):
         # service_arns = Service.list()
         services = list(Service.load_all().values())
         # services.sort(key=lambda x: x.desired_count)
         services = [s for s in services if s.desired_count > 0]
-        services.sort(key=lambda x: getattr(x, sort), reverse=True)
-        # for s in services:
-        #     print(f"{s} C: {s.cpu} M: {s.memory} MR: {s.memory_reservation}")
-        table = [s.tabulate for s in services]
-        print(tabulate(table, headers=["Name", "Desired Count", "CPU", "MEM", "MEMR"]))
+        services.sort(key=lambda x: getattr(x, sort)[1], reverse=True)
 
-        client = boto3.client('ce', region_name=REGION)
-        print("Done.")
+        # client = boto3.client('ce', region_name=REGION)
+
+        table = [s.tabulate for s in services]
+        print(tabulate(table, headers=["Name", "Desired Count", "CPU", "MEM", "MEMR", "Total CPU", "Total MEM", "Total MEMR"]))
 
 
 if __name__ == '__main__':
