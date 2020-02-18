@@ -170,9 +170,7 @@ class Service(Resource):
 @click.option("--env", default="prod")
 def cmd(env, sort):
     with auth([f"everest-{env}"]):
-        # service_arns = Service.list()
         services = list(Service.load_all().values())
-        # services.sort(key=lambda x: x.desired_count)
         services = [s for s in services if s.desired_count > 1]
         services.sort(key=lambda x: getattr(x, sort)[1], reverse=True)
 
