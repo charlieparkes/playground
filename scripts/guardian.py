@@ -13,7 +13,9 @@ name_prefix="lam-asset-collector"
 
 with auth(["everest-prod"]):
     client = boto3.client("sqs", region_name="us-east-2")
-    queue_urls = client.list_queues(QueueNamePrefix=name_prefix)["QueueUrls"]
+    response = client.list_queues(QueueNamePrefix=name_prefix)
+    check_status(response)
+    queue_urls = response["QueueUrls"]
 
     _queue = [q for q in queue_urls if "dlq" not in q][0]
     QUEUE = {"name": _queue.split('/')[-1], "url": _queue}
@@ -22,10 +24,6 @@ with auth(["everest-prod"]):
     _dlq = [q for q in queue_urls if "dlq" in q][0]
     DLQ = {"name": _dlq.split('/')[-1], "url": _dlq}
     print(f"DLQ: {DLQ}")
-
-    # for b in batch(records, 10):
-    #     response = client.send_message_batch(QueueUrl=QUEUE["url"], Entries=[sqs.build(r) for r in b])
-    #     check_status(response)
 
 
 class MyQueueConfig(QueueConfig):
