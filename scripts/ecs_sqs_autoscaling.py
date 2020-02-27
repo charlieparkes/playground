@@ -8,8 +8,8 @@ from lpipe.utils import get_nested, check_status, hash
 from utils.aws import auth
 
 
-service_name = "pypedream-orchestrator"
-queue_name = "orchestrator-input-queue.fifo"
+# service_name = "pypedream-orchestrator"
+# queue_name = "orchestrator-input-queue.fifo"
 
 # service_name = "pypedream-taxonomy"
 # queue_name = "taxonomy-input-queue.fifo"
@@ -21,6 +21,9 @@ queue_name = "orchestrator-input-queue.fifo"
 
 # queue_name = "language_checker_entity-input-queue.fifo"
 # service_name = "pypedream-language_checker_entity"
+
+service_name = "media-service-render"
+queue_name = "media-service-render-input"
 
 now = datetime.now(tz=timezone.utc)
 region = "us-east-2"
@@ -257,6 +260,29 @@ def estimate_pct_of_desired_pressure(
         return 0
 
 
+def linear_regression(data: list, r: range = None):
+    """Calculate the linear regression of a data-set, assuming each data-point is equidistant on the x-axis.
+
+    Args:
+        data (list): list of data points
+        r (range):
+
+    Returns:
+        tuple: return a, b in solution to y = ax + b such that root mean square distance between trend line and original points is minimized
+    """
+    _r = r if r else range(len(data))
+    N = len(_r)
+    Sx = Sy = Sxx = Syy = Sxy = 0.0
+    for x, y in zip(_r, data):
+        Sx = Sx + x
+        Sy = Sy + y
+        Sxx = Sxx + x*x
+        Syy = Syy + y*y
+        Sxy = Sxy + x*y
+    det = Sxx * N - Sx * Sx
+    return (Sxy * N - Sy * Sx) / det, (Sxx * Sy - Sx * Sxy) / det
+
+
 def estimate_msg_processing_ratio(queue: Queue, svc_name: str, target_pressure: int = 200):
     """
     Scale in/out with target tracking around (sent / received) @ 100.
@@ -270,14 +296,23 @@ def estimate_msg_processing_ratio(queue: Queue, svc_name: str, target_pressure: 
         # steady state
         val = (queue.num_sent / queue.num_received) * 100
 
-        # never scale down if the queue age is greater than one hour
-        if val < 100 and queue.age_oldest_msg / 60 / 60 > 1:
-            print(f"Will override MessageProcessingRatio: {val}")
-            return 100
+        # before we start scaling down, check some edge cases
+        if val < 100:
+            # if queue age is trending up, gently scale up
+            age_oldest_msg_series = [m['Average'] for m in queue.metrics["age_oldest_msg"]]
+            slope, _ = linear_regression(age_oldest_msg_series)
+            if slope > 0:
+                print(f"Will override MessageProcessingRatio: {val}")
+                return 120
+
+            # never scale down if the queue age is greater than one hour
+            if queue.age_oldest_msg / 60 / 60 > 1:
+                print(f"Will override MessageProcessingRatio: {val}")
+                return 100
 
         # if keeping up, try to gradually scale down
         svc = Service.load(svc_name)
-        if svc.desired_count > 1 and queue.age_oldest_msg < 60 and 95 <= val <= 105:
+        if svc.desired_count > 1 and queue.age_oldest_msg < 60 and 90 <= val <= 110:
             print(f"Will override MessageProcessingRatio: {val}")
             return (
                 int(queue.num_sent) / int(svc.desired_count) / target_pressure
@@ -285,11 +320,15 @@ def estimate_msg_processing_ratio(queue: Queue, svc_name: str, target_pressure: 
 
         return val
 
-    # if the queue is active, but we previously scaled to zero
-    svc = Service.load(svc_name)
-    if queue.num_msgs > 0 and svc.desired_count == 0:
-        print(f"Will override MessageProcessingRatio: {val}")
-        return 150
+    if queue.num_msgs > 0:
+        # the queue is active...
+        if queue.num_deleted > 0 and queue.age_oldest_msg / 60 / 60 > 1:
+            # ...but we're not scaled out enough
+            return 200
+        svc = Service.load(svc_name)
+        if svc.desired_count == 0:
+            # ...but we previously scaled to zero
+            return 150
 
     # default behavior, scale in
     return 0

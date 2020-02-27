@@ -168,10 +168,11 @@ class Service(Resource):
 @click.command()
 @click.option("--sort", default="cpu")
 @click.option("--env", default="prod")
-def cmd(env, sort):
+@click.option("--cluster", default="default")
+def cmd(env, sort, cluster):
     with auth([f"everest-{env}"]):
-        services = list(Service.load_all().values())
-        services = [s for s in services if s.desired_count > 1]
+        services = list(Service.load_all(cluster=cluster).values())
+        services = [s for s in services if s.desired_count > 0]
         services.sort(key=lambda x: getattr(x, sort)[1], reverse=True)
 
         # client = boto3.client('ce', region_name=REGION)
