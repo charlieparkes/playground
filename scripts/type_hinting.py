@@ -69,6 +69,9 @@ def test(wiz, foo: str, bar: str = "asdf", **kwargs):
 def test2(a: int, foo: str, c, **kwargs):
     print(f"test2(a={a}, foo={foo}, c={c})")
 
+def test3(*args, **kwargs):
+    print(f"test3(args={args}, kwargs={kwargs})")
+
 
 print("--- Test 1 ---")
 params = {
@@ -98,8 +101,9 @@ params = {
     "a": 1,
     "c": True,
 }
-functions = [test, test2]
+functions = [test, test2, test3]
 params = validate(functions, params)
 print(f"params: {params}")
 test(**params)
 test2(**params)
+test3(**params)
