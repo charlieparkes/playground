@@ -6,6 +6,7 @@ import click
 from botocore.exceptions import ClientError
 from lpipe.utils import get_nested, check_status, hash
 from tabulate import tabulate
+from tqdm import tqdm
 
 from utils import batch
 from utils.aws import auth
@@ -137,9 +138,13 @@ class Service(Resource):
     @classmethod
     def load_all(cls, services=None, cluster='default'):
         services = services if services else Service.list(cluster=cluster)
+        print(f"Found {len(services)} services.")
+        if not services:
+            return {}
         client = boto3.client("ecs", region_name=REGION)
         _services = {}
-        for b in batch(services, 10):
+        print("Describing services...")
+        for b in tqdm(batch(services, 10)):
             descriptions = _call(client.describe_services, services=b, cluster=cluster, include=['TAGS'])
             for d in descriptions["services"]:
                 s = cls(d)
@@ -156,10 +161,11 @@ class Service(Resource):
             return (r["serviceArns"], r.get('nextToken', None))
         client = boto3.client("ecs", region_name=REGION)
         service_arns = []
+        print("Listing services...")
         arns, next_token = _values(_call(client.list_services, cluster=cluster, maxResults=20))
         service_arns.extend(arns)
         while next_token:
-            arns, next_token = _values(_call(client.list_services, cluster=cluster, maxResults=100))
+            arns, next_token = _values(_call(client.list_services, cluster=cluster, maxResults=100, nextToken=next_token))
             service_arns.extend(arns)
         return list(set(service_arns))
 
@@ -177,6 +183,11 @@ def cmd(env, sort, cluster):
 
         # client = boto3.client('ce', region_name=REGION)
 
+        print("Loading task definitions...")
+        for s in tqdm(services):
+            s.task_definition
+
+        print("Tabulating...")
         table = [s.tabulate for s in services]
         print(tabulate(table, headers=["Name", "Desired Count", "CPU", "MEM", "MEMR", "Total CPU", "Total MEM", "Total MEMR"]))
 
