@@ -1,16 +1,18 @@
 -include $(shell curl -sSL -o .build-harness "https://raw.githubusercontent.com/mintel/build-harness/master/templates/Makefile.build-harness"; echo .build-harness)
 
-init: init-build-harness
-	@make pipenv
 .PHONY: init
+init: bh/init
+	@$(MAKE) bh/venv pipenv
 
-env: pipenv
-	@#if [ ! -f "activate" ]; then ln -s .venv/bin/activate activate; fi
-.PHONY: env
+# env: pipenv
+# 	@#if [ ! -f "activate" ]; then ln -s .venv/bin/activate activate; fi
+# .PHONY: env
 
-shell:
-	$(WITH_PIPENV) python
 .PHONY: shell
+shell: pipenv ; $(WITH_PIPENV) python
+
+.PHONY: clean
+clean: pipen/clean python/clean bh/clean
 
 #ENV ?= dev
 #AWS_AUTH := $(WITH_PIPENV) awsauth --profile=everest-$(ENV)
