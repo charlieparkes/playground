@@ -17,6 +17,7 @@ aws-sso = {version = "*", index="devpi"}
 backoff = "*"
 click = "*"
 devpi-client = "*"
+diagrams = "*"
 elasticsearch-dsl = "==6.3.1"
 everest-elasticsearch-dsl = {version="*", index="devpi"}
 lpipe = "*"
