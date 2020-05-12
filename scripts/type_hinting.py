@@ -69,6 +69,7 @@ def test(wiz, foo: str, bar: str = "asdf", **kwargs):
 def test2(a: int, foo: str, c, **kwargs):
     print(f"test2(a={a}, foo={foo}, c={c})")
 
+
 def test3(*args, **kwargs):
     print(f"test3(args={args}, kwargs={kwargs})")
 

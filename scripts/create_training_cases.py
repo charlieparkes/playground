@@ -13,6 +13,7 @@ from urllib.parse import quote
 import boto3
 import elasticsearch
 from elasticsearch_dsl import Q, Search
+from mintel_logging import LogLevel
 from tqdm import tqdm
 
 from api.es.utils import execute_es_multisearch, setup_connections
@@ -20,7 +21,6 @@ from api.image_utils import process_og_media
 from api.taxonomy import TaxonomyURI
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from mintel_logging import LogLevel
 from sherpa.utils import batch
 
 warnings.filterwarnings("ignore", "unclosed")

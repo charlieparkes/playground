@@ -6,7 +6,6 @@ from lpipe import sqs
 
 from utils.aws import auth
 
-
 with auth(["everest-qa"]):
     client = boto3_client("sqs", region_name="us-east-2")
     queues = client.list_queues(QueueNamePrefix="wall-e")
@@ -16,5 +15,7 @@ with auth(["everest-qa"]):
     record = {
         "foo": "bar",
     }
-    response = client.send_message_batch(QueueUrl=queue_url, Entries=[sqs.build(record)])
+    response = client.send_message_batch(
+        QueueUrl=queue_url, Entries=[sqs.build(record)]
+    )
     print(response)

@@ -5,7 +5,6 @@ from functools import wraps
 import boto3
 import botocore
 from decouple import config
-
 from lpipe.utils import batch, hash
 
 

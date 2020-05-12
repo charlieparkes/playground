@@ -2,8 +2,9 @@ import json
 from datetime import datetime
 
 from elasticsearch_dsl import Search
-from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import \
-    ProductTaggerOutcome
+from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import (
+    ProductTaggerOutcome,
+)
 
 from workflow import kinesis
 

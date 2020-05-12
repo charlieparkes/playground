@@ -9,7 +9,9 @@ from aws_sso import boto3_client
 from elasticsearch_dsl import MultiSearch, Q, Search
 from everest_elasticsearch_dsl import configure_connections, constants
 from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import (
-    Outcome, ProductTaggerOutcome)
+    Outcome,
+    ProductTaggerOutcome,
+)
 from tqdm import tqdm
 
 DRY_RUN = False

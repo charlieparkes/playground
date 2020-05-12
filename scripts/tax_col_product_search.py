@@ -48,7 +48,6 @@ print(len(results))
 # ######################
 
 
-
 client = boto3_client("sqs", region_name="us-east-2")
 queue_urls = client.list_queues(QueueNamePrefix="lam-shepherd")["QueueUrls"]
 queue_url = [q for q in queue_urls if "dlq" not in q][0]

@@ -5,7 +5,9 @@ from elasticsearch.exceptions import ConnectionTimeout
 from elasticsearch_dsl import Q, Search
 from everest_elasticsearch_dsl import configure_connections, constants
 from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import (
-    Outcome, ProductTaggerOutcome)
+    Outcome,
+    ProductTaggerOutcome,
+)
 from lpipe import sqs
 from lpipe.utils import batch
 from peewee import IntegrityError

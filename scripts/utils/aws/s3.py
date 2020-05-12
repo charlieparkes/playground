@@ -1,15 +1,11 @@
-@backoff.on_exception(
-    backoff.expo, (ClientError, ConnectionClosedError), max_time=30
-)
+@backoff.on_exception(backoff.expo, (ClientError, ConnectionClosedError), max_time=30)
 def create_bucket(b):
     response = s3.create_bucket(Bucket=b)
     check_status(response)
     s3.get_waiter("bucket_exists").wait(Bucket=b)
 
 
-@backoff.on_exception(
-    backoff.expo, (ClientError, ConnectionClosedError), max_time=30
-)
+@backoff.on_exception(backoff.expo, (ClientError, ConnectionClosedError), max_time=30)
 def delete_bucket(b):
     bucket = boto3.resource("s3").Bucket(b)
     objects = bucket.objects.all()

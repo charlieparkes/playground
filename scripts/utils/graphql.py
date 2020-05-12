@@ -2,7 +2,8 @@ import re
 import shlex
 
 import requests
-from utils.exceptions import InvalidTaxonomyURI, GraphQLError
+
+from utils.exceptions import GraphQLError, InvalidTaxonomyURI
 
 
 def query_graphql(raw_query, endpoint):

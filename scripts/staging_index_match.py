@@ -13,7 +13,7 @@ def get_staging_index_from_og_id(id):
 
 
 def get_staging_index(og_id):
-    groups = [g.lower() for g in re.findall('([A-Z]+)', og_id)]
+    groups = [g.lower() for g in re.findall("([A-Z]+)", og_id)]
     assert len(groups) >= 1
     if set(["pat", "pfb"]).issubset(groups):
         return "pfb_og"
@@ -27,7 +27,7 @@ ids = [
     ("PAT:MUL/35678913418", "pat_og"),
     ("PAT:PFB/356789134asdfasdf18", "pfb_og"),
     ("MIN:DRM/20200131-011870", "min_og"),
-    ("EDS:ab15cfd896d7d9b1e8d286c58950d7af", "eds_og")
+    ("EDS:ab15cfd896d7d9b1e8d286c58950d7af", "eds_og"),
 ]
 
 print("slicing")

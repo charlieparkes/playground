@@ -3,10 +3,9 @@ from datetime import datetime, timedelta, timezone
 
 import boto3
 from botocore.exceptions import ClientError
-from lpipe.utils import get_nested, check_status, hash
+from lpipe.utils import check_status, get_nested, hash
 
 from utils.aws import auth
-
 
 # service_name = "pypedream-orchestrator"
 # queue_name = "orchestrator-input-queue.fifo"
@@ -52,7 +51,12 @@ class Queue:
             ("num_received", "NumberOfMessagesReceived", "Sum", "Count"),
             ("num_deleted", "NumberOfMessagesDeleted", "Sum", "Count"),
             ("num_visible", "ApproximateNumberOfMessagesVisible", "Sum", "Count"),
-            ("num_not_visible", "ApproximateNumberOfMessagesNotVisible", "Sum", "Count"),
+            (
+                "num_not_visible",
+                "ApproximateNumberOfMessagesNotVisible",
+                "Sum",
+                "Count",
+            ),
             ("num_delayed", "ApproximateNumberOfMessagesDelayed", "Sum", "Count"),
             ("age_oldest_msg", "ApproximateAgeOfOldestMessage", "Average", "Seconds"),
         )
@@ -84,7 +88,9 @@ class Queue:
                 "MetricName": m[1],
                 "Dimensions": cw_dimensions,
             }
-            _id = f"sqsautoscaler_{m[1]}_{hash(json.dumps(_metric, sort_keys=True))[:8]}"
+            _id = (
+                f"sqsautoscaler_{m[1]}_{hash(json.dumps(_metric, sort_keys=True))[:8]}"
+            )
             queries[_id] = {
                 "Id": _id,
                 "MetricStat": {
@@ -100,7 +106,7 @@ class Queue:
             cloudwatch.get_metric_data,
             MetricDataQueries=list(queries.values()),
             StartTime=self.now - timedelta(minutes=5),
-            EndTime=self.now
+            EndTime=self.now,
         )
 
         _data = {
@@ -139,7 +145,6 @@ class Queue:
         #     metric_name = m[0]
         #     metric = metrics[metric_name]
         #     setattr(self, metric_name, float(metric[m[2]]))
-
 
         # Reduce cloudwatch metric datapoints to common timestamps
         for m in cw_metrics:
@@ -276,14 +281,16 @@ def linear_regression(data: list, r: range = None):
     for x, y in zip(_r, data):
         Sx = Sx + x
         Sy = Sy + y
-        Sxx = Sxx + x*x
-        Syy = Syy + y*y
-        Sxy = Sxy + x*y
+        Sxx = Sxx + x * x
+        Syy = Syy + y * y
+        Sxy = Sxy + x * y
     det = Sxx * N - Sx * Sx
     return (Sxy * N - Sy * Sx) / det, (Sxx * Sy - Sx * Sxy) / det
 
 
-def estimate_msg_processing_ratio(queue: Queue, svc_name: str, target_pressure: int = 200):
+def estimate_msg_processing_ratio(
+    queue: Queue, svc_name: str, target_pressure: int = 200
+):
     """
     Scale in/out with target tracking around (sent / received) @ 100.
 
@@ -299,7 +306,9 @@ def estimate_msg_processing_ratio(queue: Queue, svc_name: str, target_pressure: 
         # before we start scaling down, check some edge cases
         if val < 100:
             # if queue age is trending up, gently scale up
-            age_oldest_msg_series = [m['Average'] for m in queue.metrics["age_oldest_msg"]]
+            age_oldest_msg_series = [
+                m["Average"] for m in queue.metrics["age_oldest_msg"]
+            ]
             slope, _ = linear_regression(age_oldest_msg_series)
             if slope > 0:
                 print(f"Will override MessageProcessingRatio: {val}")

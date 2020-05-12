@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import boto3
 import click
 from botocore.exceptions import ClientError
-from lpipe.utils import get_nested, check_status, hash
+from lpipe.utils import check_status, get_nested, hash
 from tabulate import tabulate
 from tqdm import tqdm
 
@@ -41,12 +41,15 @@ class Resource:
 
 class ContainerDefinition(Resource):
     def __init__(self, meta):
-        super().__init__(meta, (
-            ('name', 'name'),
-            ('cpu', 'cpu'),
-            ('memory', 'memory'),
-            ('memory_reservation', 'memoryReservation'),
-        ))
+        super().__init__(
+            meta,
+            (
+                ("name", "name"),
+                ("cpu", "cpu"),
+                ("memory", "memory"),
+                ("memory_reservation", "memoryReservation"),
+            ),
+        )
 
     def __repr__(self):
         return f"ContainerDefinition<{self.name}>"
@@ -54,14 +57,17 @@ class ContainerDefinition(Resource):
 
 class TaskDefinition(Resource):
     def __init__(self, meta):
-        super().__init__(meta, (
-            ('arn', 'taskDefinitionArn'),
-            # ('containers', 'containerDefinitions'),
-            ('family', 'family'),
-            ('revision', 'revision'),
-            ('cpu', 'cpu'),
-            ('memory', 'memory'),
-        ))
+        super().__init__(
+            meta,
+            (
+                ("arn", "taskDefinitionArn"),
+                # ('containers', 'containerDefinitions'),
+                ("family", "family"),
+                ("revision", "revision"),
+                ("cpu", "cpu"),
+                ("memory", "memory"),
+            ),
+        )
         self.container_definitions = []
         for cd in self.meta.get("containerDefinitions", []):
             self.container_definitions.append(ContainerDefinition(cd))
@@ -72,7 +78,13 @@ class TaskDefinition(Resource):
     @property
     def reservations(self):
         def _total(attr):
-            return sum([getattr(cd, attr) for cd in self.container_definitions if getattr(cd, attr)])
+            return sum(
+                [
+                    getattr(cd, attr)
+                    for cd in self.container_definitions
+                    if getattr(cd, attr)
+                ]
+            )
 
         if not getattr(self, "_reservations", None):
             self._reservations = {
@@ -92,16 +104,19 @@ class TaskDefinition(Resource):
 
 class Service(Resource):
     def __init__(self, meta):
-        super().__init__(meta, (
-            ("name", "serviceName"),
-            ("arn", "serviceArn"),
-            ("events", "events"),
-            ("desired_count", "desiredCount"),
-            ("pending_count", "pendingCount"),
-            ("running_count", "runningCount"),
-            ("deployments", "deployments"),
-            ("_task_definition_arn", "taskDefinition"),
-        ))
+        super().__init__(
+            meta,
+            (
+                ("name", "serviceName"),
+                ("arn", "serviceArn"),
+                ("events", "events"),
+                ("desired_count", "desiredCount"),
+                ("pending_count", "pendingCount"),
+                ("running_count", "runningCount"),
+                ("deployments", "deployments"),
+                ("_task_definition_arn", "taskDefinition"),
+            ),
+        )
         self._task_definition = None
 
     def __repr__(self):
@@ -109,7 +124,16 @@ class Service(Resource):
 
     @property
     def tabulate(self):
-        return [self.name, self.desired_count, self.cpu[0], self.memory[0], self.memory_reservation[0], self.cpu[1], self.memory[1], self.memory_reservation[1]]
+        return [
+            self.name,
+            self.desired_count,
+            self.cpu[0],
+            self.memory[0],
+            self.memory_reservation[0],
+            self.cpu[1],
+            self.memory[1],
+            self.memory_reservation[1],
+        ]
 
     @property
     def task_definition(self):
@@ -132,11 +156,13 @@ class Service(Resource):
     @property
     def memory_reservation(self):
         if not getattr(self, "_memory_reservation", None):
-            self._memory_reservation = self.task_definition.reservations["memory_reservation"]
+            self._memory_reservation = self.task_definition.reservations[
+                "memory_reservation"
+            ]
         return (self._memory_reservation, self._memory_reservation * self.desired_count)
 
     @classmethod
-    def load_all(cls, services=None, cluster='default'):
+    def load_all(cls, services=None, cluster="default"):
         services = services if services else Service.list(cluster=cluster)
         print(f"Found {len(services)} services.")
         if not services:
@@ -145,7 +171,9 @@ class Service(Resource):
         _services = {}
         print("Describing services...")
         for b in tqdm(batch(services, 10)):
-            descriptions = _call(client.describe_services, services=b, cluster=cluster, include=['TAGS'])
+            descriptions = _call(
+                client.describe_services, services=b, cluster=cluster, include=["TAGS"]
+            )
             for d in descriptions["services"]:
                 s = cls(d)
                 _services[s.name] = s
@@ -156,19 +184,28 @@ class Service(Resource):
         return cls.load_services([name])[name]
 
     @classmethod
-    def list(cls, cluster='default'):
+    def list(cls, cluster="default"):
         def _values(r):
-            return (r["serviceArns"], r.get('nextToken', None))
+            return (r["serviceArns"], r.get("nextToken", None))
+
         client = boto3.client("ecs", region_name=REGION)
         service_arns = []
         print("Listing services...")
-        arns, next_token = _values(_call(client.list_services, cluster=cluster, maxResults=20))
+        arns, next_token = _values(
+            _call(client.list_services, cluster=cluster, maxResults=20)
+        )
         service_arns.extend(arns)
         while next_token:
-            arns, next_token = _values(_call(client.list_services, cluster=cluster, maxResults=100, nextToken=next_token))
+            arns, next_token = _values(
+                _call(
+                    client.list_services,
+                    cluster=cluster,
+                    maxResults=100,
+                    nextToken=next_token,
+                )
+            )
             service_arns.extend(arns)
         return list(set(service_arns))
-
 
 
 @click.command()
@@ -189,8 +226,22 @@ def cmd(env, sort, cluster):
 
         print("Tabulating...")
         table = [s.tabulate for s in services]
-        print(tabulate(table, headers=["Name", "Desired Count", "CPU", "MEM", "MEMR", "Total CPU", "Total MEM", "Total MEMR"]))
+        print(
+            tabulate(
+                table,
+                headers=[
+                    "Name",
+                    "Desired Count",
+                    "CPU",
+                    "MEM",
+                    "MEMR",
+                    "Total CPU",
+                    "Total MEM",
+                    "Total MEMR",
+                ],
+            )
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cmd()
