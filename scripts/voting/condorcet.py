@@ -4,23 +4,28 @@ import random
 from itertools import combinations
 from statistics import mean
 
-candidates = {k: v for k, v in enumerate([
-    "Neuromancer by William Gibson",                # 0
-    "Guards! Guards! by Terry Pratchett",           # 1
-    "The Library at Mount Char by Scott Hawkins",   # 2
-    "The Raven Tower by Ann Leckie",                # 3
-    "A Fire Upon the Deep by Vernor Vinge"          # 4
-])}
+candidates = {
+    k: v
+    for k, v in enumerate(
+        [
+            "Neuromancer by William Gibson",
+            "Guards! Guards! by Terry Pratchett",
+            "The Library at Mount Char by Scott Hawkins",
+            "The Raven Tower by Ann Leckie",
+            "A Fire Upon the Deep by Vernor Vinge",
+        ]
+    )
+}
 
 # ([0-9])\s
 # '$1, '
-_ballots = {                   # 0  1  2  3  4
-    "jdoepke@mintel.com":       [2, 5, 4, 1, 3],
-    "cmathews@mintel.com":      [3, 5, 4, 2, 1],
-    "ekishchukova@mintel.com":  [2, 3, 5, 4, 1],
-    "layers@mintel.com":        [4, 2, 1, 3, 5],
-    "epingolt@mintel.com":      [4, 1, 5, 3, 2],
-    "agura@mintel.com":         [3, 1, 5, 4, 2],
+_ballots = {
+    "jdoepke@mintel.com": [2, 5, 4, 1, 3],
+    "cmathews@mintel.com": [3, 5, 4, 2, 1],
+    "ekishchukova@mintel.com": [2, 3, 5, 4, 1],
+    "layers@mintel.com": [4, 2, 1, 3, 5],
+    "epingolt@mintel.com": [4, 1, 5, 3, 2],
+    "agura@mintel.com": [3, 1, 5, 4, 2],
 }
 
 active_voters = [
@@ -41,7 +46,6 @@ class Ballot:
         assert sorted(list(set(ranking))) == sorted(ranking)
         self.name = name
         self.ranking = ranking
-        self.cache = {}
         self._candidates = None
 
     def __repr__(self):
@@ -51,7 +55,7 @@ class Ballot:
     def candidates(self):
         if self._candidates:
             return self._candidates
-        self._candidates = [self.ranking.index(i+1) for i in range(len(candidates))]
+        self._candidates = [self.ranking.index(i + 1) for i in range(len(candidates))]
         return self._candidates
 
     def position(self, c):
@@ -85,7 +89,7 @@ def condorcet(candidates: list, ballots: list):
         # print(f"{key}: {s}")
 
     for candidate, wins in totals.items():
-        if wins == len(candidates)-1:
+        if wins == len(candidates) - 1:
             return totals, candidate
     return totals, None
 

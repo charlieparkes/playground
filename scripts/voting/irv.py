@@ -2,23 +2,28 @@ import hashlib
 import json
 from statistics import mean
 
-candidates = {k: v for k, v in enumerate([
-    "Neuromancer by William Gibson",
-    "Guards! Guards! by Terry Pratchett",
-    "The Library at Mount Char by Scott Hawkins",
-    "The Raven Tower by Ann Leckie",
-    "A Fire Upon the Deep by Vernor Vinge"
-])}
+candidates = {
+    k: v
+    for k, v in enumerate(
+        [
+            "Neuromancer by William Gibson",
+            "Guards! Guards! by Terry Pratchett",
+            "The Library at Mount Char by Scott Hawkins",
+            "The Raven Tower by Ann Leckie",
+            "A Fire Upon the Deep by Vernor Vinge",
+        ]
+    )
+}
 
 # ([0-9])\s
 # '$1, '
 _ballots = {
-    "jdoepke@mintel.com":       [2, 5, 4, 1, 3],
-    "cmathews@mintel.com":      [3, 5, 2, 4, 1],
-    "ekishchukova@mintel.com":  [2, 3, 5, 4, 1],
-    "layers@mintel.com":        [4, 2, 1, 3, 5],
-    "epingolt@mintel.com":      [4, 1, 5, 3, 2],
-    "agura@mintel.com":         [3, 1, 5, 4, 2],
+    "jdoepke@mintel.com": [2, 5, 4, 1, 3],
+    "cmathews@mintel.com": [3, 5, 2, 4, 1],
+    "ekishchukova@mintel.com": [2, 3, 5, 4, 1],
+    "layers@mintel.com": [4, 2, 1, 3, 5],
+    "epingolt@mintel.com": [4, 1, 5, 3, 2],
+    "agura@mintel.com": [3, 1, 5, 4, 2],
 }
 
 active_voters = [
@@ -55,12 +60,17 @@ class Ballot:
         if key in self.cache:
             return self.cache[key]
         try:
-            _ranking = [j if i in active_candidates else len(candidates)+1 for i, j in enumerate(self.ranking)]
+            _ranking = [
+                j if i in active_candidates else len(candidates) + 1
+                for i, j in enumerate(self.ranking)
+            ]
             self.cache[key] = self.ranking.index(min(_ranking))
             print(f"{self.name}\t\t{self.ranking} {_ranking} {self.cache[key]}")
             return self.cache[key]
         except Exception as e:
-            print(f"{self} failed to find favorite candidate among {active_candidates} - {e}")
+            print(
+                f"{self} failed to find favorite candidate among {active_candidates} - {e}"
+            )
 
 
 ballots = [Ballot(k, v) for k, v in _ballots.items()]
@@ -88,7 +98,9 @@ def unpopular_popularity(unpopular, popular=None):
 def count_votes(active_candidates, weigh=False):
     distribution = {ac: 0 for ac in active_candidates}
     for b in ballots:
-        distribution[b.favorite(active_candidates)] += active_voter_weight if weigh and b.name in active_voters else 1
+        distribution[b.favorite(active_candidates)] += (
+            active_voter_weight if weigh and b.name in active_voters else 1
+        )
     return distribution
 
 
@@ -117,7 +129,9 @@ def rank():
         dist_values = distribution.values()
         lowest_count = min(dist_values)
         if list(dist_values).count(lowest_count) > 1:
-            lowest_candidates = [ac for ac, count in distribution.items() if count == lowest_count]
+            lowest_candidates = [
+                ac for ac, count in distribution.items() if count == lowest_count
+            ]
             print(f"Tie breaker between {lowest_candidates}...")
             pop = unpopular_popularity(lowest_candidates, active_candidates)
             lc_scores = {lc: pop[lc] for lc in lowest_candidates}
@@ -128,13 +142,18 @@ def rank():
                     lowest_scorer = lc
                 print(f"{lc} averaged {score}")
             # If these are the same, draw lots because ffs this is for a book club.
-            active_candidates = [k for k, v in distribution.items() if k != lowest_scorer]
+            active_candidates = [
+                k for k, v in distribution.items() if k != lowest_scorer
+            ]
         else:
-            active_candidates = [k for k, v in distribution.items() if v != lowest_count]
+            active_candidates = [
+                k for k, v in distribution.items() if v != lowest_count
+            ]
 
     if len(active_candidates) > 0:
         print(f"\nWinner: {candidates[active_candidates[0]]}")
     else:
         print("\nAll candidates eliminated.")
+
 
 __main__ = rank()
