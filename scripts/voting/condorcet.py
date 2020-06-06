@@ -1,4 +1,3 @@
-import hashlib
 import json
 import random
 from itertools import combinations
@@ -30,10 +29,6 @@ active_voters = [
     "agura@mintel.com",
 ]
 active_voter_weight = 1.5
-
-
-def hash(data):
-    return hashlib.sha1(json.dumps(data).encode("utf-8")).hexdigest()
 
 
 class Ballot:
