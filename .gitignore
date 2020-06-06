@@ -122,4 +122,4 @@ venv.bak/
 
 .svn
 db.sqlite*
-*build-harness
+*build-harness*
