@@ -1,6 +1,7 @@
 import backoff
 import urllib3
 from aws_sso import boto3_client
+from db import Outcome, db
 from elasticsearch.exceptions import ConnectionTimeout
 from elasticsearch_dsl import Q, Search
 from everest_elasticsearch_dsl import configure_connections, constants
@@ -12,8 +13,6 @@ from lpipe import sqs
 from lpipe.utils import batch
 from peewee import IntegrityError
 from tqdm import tqdm
-
-from db import Outcome, db
 
 db.connect()
 try:

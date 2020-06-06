@@ -1,13 +1,13 @@
 import json
 from datetime import datetime, timedelta, timezone
 
-import boto3
 import click
+
+import boto3
 from botocore.exceptions import ClientError
 from lpipe.utils import check_status, get_nested, hash
 from tabulate import tabulate
 from tqdm import tqdm
-
 from utils import batch
 from utils.aws import auth
 

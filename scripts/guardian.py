@@ -5,7 +5,6 @@ from botocore.exceptions import ClientError
 from lpipe import sqs
 from lpipe.utils import batch, check_status, get_nested, hash
 from multi_sqs_listener import EventBus, MultiSQSListener, QueueConfig
-
 from utils.aws import auth, check_status
 
 name_prefix = "lam-asset-collector"

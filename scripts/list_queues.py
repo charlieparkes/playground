@@ -3,7 +3,6 @@ from datetime import datetime
 
 from aws_sso import boto3_client
 from lpipe import sqs
-
 from utils.aws import auth
 
 with auth(["everest-qa"]):

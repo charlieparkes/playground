@@ -2,7 +2,6 @@ import re
 import shlex
 
 import requests
-
 from utils.exceptions import GraphQLError, InvalidTaxonomyURI
 
 

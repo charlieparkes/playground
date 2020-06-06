@@ -17,6 +17,7 @@ import aws_sso
 import backoff
 import urllib3
 from botocore.exceptions import ClientError, NoCredentialsError
+from db import Outcome, db
 from elasticsearch.exceptions import ConnectionTimeout
 from elasticsearch_dsl import Q, Search
 from everest_elasticsearch_dsl import configure_connections, constants
@@ -27,8 +28,6 @@ from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import (
 from lpipe import sqs
 from lpipe.utils import batch, set_env
 from tqdm import tqdm
-
-from db import Outcome, db
 
 TEMP_CREDENTIALS_DURATION = 8 * 60 * 60  # 8 hours
 

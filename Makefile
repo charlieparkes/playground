@@ -12,7 +12,10 @@ init: bh/init
 shell: pipenv ; $(WITH_PIPENV) python
 
 .PHONY: clean
-clean: pipen/clean python/clean bh/clean
+clean: pipenv/clean python/clean bh/clean
+
+.PHONY: diagrams
+diagrams: pipenv ; $(WITH_PIPENV) python diagrams/enrichment.py
 
 #ENV ?= dev
 #AWS_AUTH := $(WITH_PIPENV) awsauth --profile=everest-$(ENV)

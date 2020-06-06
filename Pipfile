@@ -9,7 +9,7 @@ verify_ssl = true
 name = "devpi"
 
 [requires]
-python_version = "3.6"
+python_version = "3.8"
 
 [packages]
 awscli = "*"

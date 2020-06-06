@@ -5,7 +5,6 @@ from elasticsearch_dsl import Search
 from everest_elasticsearch_dsl.documents.staging.product_tagger_outcome import (
     ProductTaggerOutcome,
 )
-
 from workflow import kinesis
 
 start = datetime.strptime("2019-10-17 00:00:00", "%Y-%m-%d %H:%M:%S")

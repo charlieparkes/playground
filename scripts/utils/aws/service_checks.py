@@ -12,7 +12,6 @@ import socket
 
 import botocore.config
 import six
-
 from pytest_localstack import constants, exceptions
 
 
