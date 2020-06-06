@@ -28,7 +28,7 @@ active_voters = [
     "ekishchukova@mintel.com",
     "agura@mintel.com",
 ]
-active_voter_weight = 1.5
+active_voter_weight = 1
 
 
 class Ballot:
@@ -63,10 +63,11 @@ def condorcet(candidates: list, ballots: list):
         key = str(sorted(list(c)))
         score[key] = {c[0]: 0, c[1]: 0}
         for b in ballots:
+            inc = active_voter_weight if b.name in active_voters else 1
             if b.position(c[0]) > b.position(c[1]):
-                score[key][c[0]] += 1
+                score[key][c[0]] += inc
             else:
-                score[key][c[1]] += 1
+                score[key][c[1]] += inc
 
     totals = {c: 0 for c in candidates}
 
@@ -126,8 +127,8 @@ def main():
     while not winner:
         totals, winner = condorcet(_candidates, ballots)
 
-        # for candidate, wins in totals.items():
-        #     print(f"{candidate}: {wins}")
+        for candidate, wins in totals.items():
+            print(f"{_candidates} -> {candidate}: {wins}")
 
         if winner:
             print(f"Winner: [{winner}] {candidates[winner]}")
@@ -136,7 +137,7 @@ def main():
             # All lowest or random elimination
             # https://www.daneckam.com/?p=374
             _min = min(totals.values())
-            lowest = [c for c in candidates if totals[c] == _min]
+            lowest = [c for c in _candidates if totals[c] == _min]
             if len(lowest) == len(_candidates):
                 _candidates.remove(random.choice(_candidates))
             else:
