@@ -4,18 +4,13 @@ import random
 from itertools import combinations
 from statistics import mean
 
-candidates = {
-    k: v
-    for k, v in enumerate(
-        [
-            "Neuromancer by William Gibson",
-            "Guards! Guards! by Terry Pratchett",
-            "The Library at Mount Char by Scott Hawkins",
-            "The Raven Tower by Ann Leckie",
-            "A Fire Upon the Deep by Vernor Vinge",
-        ]
-    )
-}
+candidates = dict(enumerate([
+    "Neuromancer by William Gibson",
+    "Guards! Guards! by Terry Pratchett",
+    "The Library at Mount Char by Scott Hawkins",
+    "The Raven Tower by Ann Leckie",
+    "A Fire Upon the Deep by Vernor Vinge",
+]))
 
 # ([0-9])\s
 # '$1, '
