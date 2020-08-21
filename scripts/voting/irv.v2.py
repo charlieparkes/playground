@@ -21,6 +21,7 @@ _ballots = {
     "layers@mintel.com": [4, 2, 1, 3, 5],
     "epingolt@mintel.com": [4, 1, 5, 3, 2],
     "agura@mintel.com": [3, 1, 5, 4, 2],
+    "pnechifor@mintel.com": [1, 4, 2, 3, 5],
 }
 
 active_voters = [
@@ -76,7 +77,7 @@ def output_round(totals, eliminate):
 
 def condorcet(candidates: list, ballots: list):
     comparisons = list(combinations(candidates, 2))
-    print(comparisons)
+    # print(comparisons)
     score = {}
 
     for c in comparisons:
@@ -88,7 +89,7 @@ def condorcet(candidates: list, ballots: list):
             else:
                 score[key][c[1]] += 1
 
-    print(score)
+    # print(score)
     totals = {c: 0 for c in candidates}
 
     for key, s in score.items():
@@ -118,6 +119,7 @@ def irv(candidates: list, ballots: list):
     elim_candidates = [c for c in candidates if totals[c] == elim_threshold]
 
     if len(elim_candidates) > 1:
+        print("Tie-breaker...")
         elim_ballots = [b for b in ballots if b.favorite(candidates) in elim_candidates]
 
         # Attempt elimination with condorcet
@@ -125,9 +127,9 @@ def irv(candidates: list, ballots: list):
         elim_candidates = sorted(condorcet_totals, key=condorcet_totals.get)
         if condorcet_totals[elim_candidates[0]] != condorcet_totals[elim_candidates[1]]:
             eliminate = elim_candidates[0]
-            print(f"Tie-breaker (condorcet) {condorcet_totals} -> {eliminate}")
+            print(f"\tcondorcet {condorcet_totals} -> {eliminate}")
         else:
-            print(f"Tie-breaker failed (condorcet) {condorcet_totals}")
+            print(f"\tcondorcet failed {condorcet_totals}")
 
         # If one elimination candidate has more first-choice votes, prefer them
         if eliminate is None:
@@ -139,14 +141,14 @@ def irv(candidates: list, ballots: list):
             elim_candidates = sorted(elim_totals, key=elim_totals.get)
             if elim_totals[elim_candidates[0]] != elim_totals[elim_candidates[1]]:
                 eliminate = elim_candidates[0]
-                print(f"Tie-breaker (first-choice) {elim_totals} -> {eliminate}")
+                print(f"\tfirst-choice {elim_totals} -> {eliminate}")
             else:
-                print(f"Tie-breaker failed (first-choice) {elim_totals}")
+                print(f"\tfirst-choice failed {elim_totals}")
 
         # If there wasn't a first-choice winner, pick at random
         if eliminate is None:
             eliminate = random.choice(elim_candidates)
-            print(f"Tie-breaker (random) {elim_candidates} -> {eliminate}")
+            print(f"\trandom {elim_candidates} -> {eliminate}")
 
     # Easy, no-tie elimination
     elif len(elim_candidates) == 1:

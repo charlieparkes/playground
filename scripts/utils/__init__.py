@@ -12,7 +12,6 @@ from enum import Enum
 from pathlib import Path
 
 import requests
-from lpipe.exceptions import InvalidInputError, InvalidPathError
 
 
 def hash(encoded_data):

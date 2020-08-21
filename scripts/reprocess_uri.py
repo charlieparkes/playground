@@ -1,6 +1,6 @@
 # setup
 import boto3
-from lpipe import sqs
+from lpipe.contrib import sqs
 from utils.aws import auth
 
 with auth(["everest-qa"]):
