@@ -22,20 +22,20 @@ _ballots = {
     "cmathews@mintel.com": [1, 2, 5, 7, 4, 3, 6, 8, 9],
     "jdoepke@mintel.com": [2, 1, 5, 3, 4, 9, 8, 6, 7],
     "epingolt@mintel.com": [2, 6, 7, 5, 8, 9, 1, 3, 4],
-    "jkalmer@mintel.com": [5, 6, 4, 7, 2, 8, 9, 1, 3],
+#    "jkalmer@mintel.com": [5, 6, 4, 7, 2, 8, 9, 1, 3],
     "chavlin@mintel.com": [1, 6, 5, 3, 8, 9, 2, 4, 7],
-    "layers@mintel.com": [1, 6, 4, 3, 7, 9, 5, 2, 8],
-    "bcouche@mintel.com": [8, 7, 6, 3, 2, 9, 4, 1, 5],
+#    "layers@mintel.com": [1, 6, 4, 3, 7, 9, 5, 2, 8],
+#    "bcouche@mintel.com": [8, 7, 6, 3, 2, 9, 4, 1, 5],
 }
 
 active_voters = [
     "cmathews@mintel.com",
     "jdoepke@mintel.com",
     "epingolt@mintel.com",
-    "jkalmer@mintel.com",
+#    "jkalmer@mintel.com",
     "chavlin@mintel.com",
-    "layers@mintel.com",
-    "bcouche@mintel.com",
+#    "layers@mintel.com",
+#    "bcouche@mintel.com",
 ]
 active_voter_weight = 1
 

@@ -1,0 +1,6 @@
+syntax = "proto3";
+package tutorial;
+
+import "google/protofbuf/timestamp.proto";
+
+option go_package = "github.com/alphachai/playground/go/protobuftutoriala"
