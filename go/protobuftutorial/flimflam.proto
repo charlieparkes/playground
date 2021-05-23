@@ -3,4 +3,18 @@ package tutorial;
 
 import "google/protofbuf/timestamp.proto";
 
-option go_package = "github.com/alphachai/playground/go/protobuftutorial"
+option go_package = "gitlab.com/alphachai/playground/go/protobuftutorial";
+
+message FlimFlam {
+    int64 id = 1;
+    string name = 2;
+
+    message Plumbus {
+        int64 id = 1;
+        string name =2;
+    }
+
+    repeated Plumbus plmbusi = 3;
+
+    google.protobuf.Timestamp last_updated = 4;
+}
