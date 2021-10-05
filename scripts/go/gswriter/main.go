@@ -3,12 +3,13 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"net/url"
 	"os"
 	"strings"
 
 	"cloud.google.com/go/storage"
-	"github.com/peak6/kairos/pkg/app"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -24,9 +25,7 @@ func init() {
 }
 
 func main() {
-	app.Main(
-		Cmd,
-	)
+	Cmd.Execute()
 }
 
 func run(c *cobra.Command, args []string) error {
@@ -35,7 +34,7 @@ func run(c *cobra.Command, args []string) error {
 		return err
 	}
 
-	ctx := app.Context
+	ctx := context.Background()
 	var w *bufio.Writer
 
 	// If the path is a valid google storage url (gs://), write to the bucket.
@@ -48,7 +47,7 @@ func run(c *cobra.Command, args []string) error {
 		file := bucket.Object(strings.TrimLeft(u.Path, "/")).NewWriter(ctx)
 		defer file.Close()
 		w = bufio.NewWriter(file)
-		app.Log.Info("writing to google storage", zap.String("host", u.Host), zap.String("path", u.Path))
+		log.Info("writing to google storage", zap.String("host", u.Host), zap.String("path", u.Path))
 	} else {
 		file, err := os.Create(path)
 		if err != nil {
