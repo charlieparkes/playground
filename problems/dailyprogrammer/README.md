@@ -1,2 +1,2 @@
 # dailyprogrammer
-Challenges from the daily programmer subreddit
+Challenges from the [daily programmer](www.reddit.com/r/dailyprogrammer/) subreddit
